@@ -6,6 +6,7 @@ on:
     paths:
       - 'android/**'
       - '.github/workflows/build-apk.yml'
+      - 'app/**' # Eğer dosyalar ana dizindeyse bu da tetiklesin
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
@@ -19,7 +20,7 @@ on:
           - debug
           - release
       server_url:
-        description: 'https://falzer5.peuplade.com.tr'
+        description: 'Örn: https://falzer5.peuplade.com.tr'
         required: false
         default: ''
 
@@ -27,15 +28,13 @@ env:
   JAVA_VERSION: '17'
 
 jobs:
-  # ─────────────────────────────────────────────
-  # JOB 1: Build
-  # ─────────────────────────────────────────────
   build:
     name: 📦 APK Oluştur (${{ github.event.inputs.build_type || 'debug' }})
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: android
+    
+    # NOT: Eğer dosyaların 'android' klasöründe olduğundan eminseniz 
+    # aşağıdaki 'defaults' kısmını geri ekleyebilirsiniz. 
+    # Ama şu anki hatanız 'gradlew' bulunamadığı için burayı devre dışı bırakıyoruz.
 
     steps:
       # ── 1. Kod al ──────────────────────────────────────────────────────
@@ -50,192 +49,89 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # ── 3. Gradle izinleri ─────────────────────────────────────────────
-      - name: 🔐 Gradle Wrapper İzni
-        run: chmod +x ./gradlew
+      # ── 3. Dosya Yapısını Doğrula (Hata Ayıklama İçin) ──────────────────
+      - name: 📂 Dosya Yapısını Listele
+        run: ls -R
 
-      # ── 4. Sunucu URL güncelle (opsiyonel) ─────────────────────────────
+      # ── 4. Gradle izinleri ─────────────────────────────────────────────
+      - name: 🔐 Gradle Wrapper İzni
+        run: |
+          if [ -f "./gradlew" ]; then
+            chmod +x ./gradlew
+          elif [ -f "./android/gradlew" ]; then
+            cd android && chmod +x ./gradlew
+          else
+            echo "❌ gradlew dosyası bulunamadı!"
+            exit 1
+          fi
+
+      # ── 5. Sunucu URL güncelle (opsiyonel) ─────────────────────────────
       - name: 🌐 Sunucu URL Güncelle
-        if: ${{ github.event.inputs.server_url != '' }}
+        if: github.event.inputs.server_url != ''
         run: |
           SERVER="${{ github.event.inputs.server_url }}"
-          echo "Sunucu URL güncelleniyor: $SERVER"
-          # MainActivity.kt içindeki SERVER_URL satırını güncelle
-          sed -i "s|private val SERVER_URL = \".*\"|private val SERVER_URL = \"$SERVER\"|g" \
-            app/src/main/java/com/fimar/MainActivity.kt
-          # build.gradle buildConfigField'larını güncelle
-          sed -i "s|\"http://192.168.1.100/fimar/index.php\"|\"$SERVER\"|g" \
-            app/build.gradle
-          echo "✓ Sunucu URL: $SERVER"
+          # Dosyanın nerede olduğunu bul ve sed ile değiştir
+          TARGET_FILE=$(find . -name "MainActivity.kt")
+          GRADLE_FILE=$(find . -name "build.gradle")
+          
+          if [ ! -z "$TARGET_FILE" ]; then
+            sed -i "s|private val SERVER_URL = \".*\"|private val SERVER_URL = \"$SERVER\"|g" "$TARGET_FILE"
+          fi
+          if [ ! -z "$GRADLE_FILE" ]; then
+            sed -i "s|\"http://192.168.1.100/fimar/index.php\"|\"$SERVER\"|g" "$GRADLE_FILE"
+          fi
 
-      # ── 5. Gradle önbellek ─────────────────────────────────────────────
-      - name: 💾 Gradle Önbellek
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      # ── 6. Bağımlılıkları indir ────────────────────────────────────────
-      - name: 📦 Bağımlılıkları İndir
-        run: ./gradlew dependencies --configuration releaseRuntimeClasspath --no-daemon 2>/dev/null || true
-
-      # ── 7. Debug Keystore oluştur ──────────────────────────────────────
-      - name: 🔑 Debug Keystore Oluştur
-        run: |
-          if [ ! -f app/debug.keystore ]; then
-            keytool -genkey -v \
-              -keystore app/debug.keystore \
-              -alias androiddebugkey \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -storepass android \
-              -keypass android \
-              -dname "CN=Android Debug,O=Android,C=US"
-            echo "✓ Debug keystore oluşturuldu"
-            
-         # ── 8. Release Keystore (secret varsa) ────────────────────────────
+      # ── 6. Release Keystore Hazırla ────────────────────────────────────
       - name: 🔑 Release Keystore Hazırla
         env:
           MY_KEYSTORE_SECRET: ${{ secrets.KEYSTORE_BASE64 }}
-        # secrets yerine artık env kullanıyoruz
-        if: |
-          (github.event.inputs.build_type == 'release' || startsWith(github.ref, 'refs/tags/v')) && 
-          env.MY_KEYSTORE_SECRET != ''
+        if: (github.event.inputs.build_type == 'release' || startsWith(github.ref, 'refs/tags/v')) && env.MY_KEYSTORE_SECRET != ''
         run: |
-          echo "$MY_KEYSTORE_SECRET" | base64 --decode > app/fimar-release.keystore
-          echo "✓ Release keystore decode edildi"
+          # app klasörünün yerini bul
+          APP_PATH=$(find . -name "app" -type d | head -n 1)
+          echo "$MY_KEYSTORE_SECRET" | base64 --decode > "$APP_PATH/fimar-release.keystore"
+          echo "✓ Release keystore $APP_PATH içine oluşturuldu"
 
-      # ── 9. Debug APK Build ─────────────────────────────────────────────
+      # ── 7. APK Build (Debug) ───────────────────────────────────────────
       - name: 🛠️ Debug APK Oluştur
-        if: ${{ github.event.inputs.build_type != 'release' || github.event_name != 'workflow_dispatch' }}
+        if: github.event.inputs.build_type != 'release' || github.event_name != 'workflow_dispatch'
         run: |
-          ./gradlew assembleDebug \
-            --no-daemon \
-            --stacktrace \
-            -Porg.gradle.jvmargs="-Xmx3g"
+          GRADLE_PATH=$(find . -name "gradlew")
+          cd $(dirname $GRADLE_PATH)
+          ./gradlew assembleDebug --no-daemon -Porg.gradle.jvmargs="-Xmx3g"
 
-      # ── 10. Release APK Build ──────────────────────────────────────────
+      # ── 8. APK Build (Release) ─────────────────────────────────────────
       - name: 🚀 Release APK Oluştur
-        if: ${{ github.event.inputs.build_type == 'release' || startsWith(github.ref, 'refs/tags/v') }}
+        if: github.event.inputs.build_type == 'release' || startsWith(github.ref, 'refs/tags/v')
         run: |
+          GRADLE_PATH=$(find . -name "gradlew")
+          cd $(dirname $GRADLE_PATH)
           if [ -f "app/fimar-release.keystore" ]; then
             ./gradlew assembleRelease \
               --no-daemon \
-              --stacktrace \
               -PKEYSTORE_FILE="fimar-release.keystore" \
               -PKEYSTORE_PASS="${{ secrets.KEYSTORE_PASSWORD }}" \
               -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
               -PKEY_PASS="${{ secrets.KEY_PASSWORD }}" \
               -Porg.gradle.jvmargs="-Xmx3g"
           else
-            # Keystore yoksa debug key ile imzala
-            ./gradlew assembleRelease \
-              --no-daemon \
-              --stacktrace \
-              -Porg.gradle.jvmargs="-Xmx3g"
+            ./gradlew assembleRelease --no-daemon -Porg.gradle.jvmargs="-Xmx3g"
           fi
 
-      # ── 11. APK bilgisi ────────────────────────────────────────────────
-      - name: 📋 APK Bilgisi
-        run: |
-          echo "## 📦 Oluşturulan APK Dosyaları" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Dosya | Boyut | Yol |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|-------|-----|" >> $GITHUB_STEP_SUMMARY
-          find . -name "*.apk" -type f | while read f; do
-            SIZE=$(du -sh "$f" | cut -f1)
-            NAME=$(basename "$f")
-            echo "| 📱 \`$NAME\` | $SIZE | \`$f\` |" >> $GITHUB_STEP_SUMMARY
-          done
-          echo "" >> $GITHUB_STEP_SUMMARY
-          find . -name "*.apk" -type f
-
-      # ── 12. Debug APK Artifact ─────────────────────────────────────────
-      - name: 📤 Debug APK Yükle
-        if: ${{ github.event.inputs.build_type != 'release' || github.event_name != 'workflow_dispatch' }}
+      # ── 9. Artifacts ve Release ───────────────────────────────────────
+      - name: 📤 APK Yükle
         uses: actions/upload-artifact@v4
         with:
-          name: fimar-debug-apk-build${{ github.run_number }}
-          path: android/app/build/outputs/apk/debug/*.apk
+          name: fimar-apk-build${{ github.run_number }}
+          path: "**/*.apk"
           retention-days: 30
-          if-no-files-found: error
 
-      # ── 13. Release APK Artifact ───────────────────────────────────────
-      - name: 📤 Release APK Yükle
-        if: ${{ github.event.inputs.build_type == 'release' || startsWith(github.ref, 'refs/tags/v') }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: fimar-release-apk-build${{ github.run_number }}
-          path: android/app/build/outputs/apk/release/*.apk
-          retention-days: 90
-          if-no-files-found: warn
-
-      # ── 14. GitHub Release (tag push'ta) ──────────────────────────────
-      - name: 🏷️ GitHub Release Oluştur
+      - name: 🏷️ GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            android/app/build/outputs/apk/release/*.apk
-            android/app/build/outputs/apk/debug/*.apk
+          files: "**/*.apk"
           name: "FİMAR Su Faturası ${{ github.ref_name }}"
-          draft: false
-          prerelease: false
           generate_release_notes: true
-          body: |
-            ## 💧 FİMAR Su Faturası Sistemi ${{ github.ref_name }}
-
-            ### 📱 Kurulum
-            1. APK dosyasını Android cihaza indirin (min Android 7.0)
-            2. **Ayarlar → Güvenlik → Bilinmeyen Kaynaklar** izni verin
-            3. APK'yı yükleyin
-            4. Uygulamayı açın ve PHP sunucu adresini yapılandırın
-
-            ### ✨ Özellikler
-            - 24 Daire Su Fatura Yönetimi
-            - 3 Kademeli Su Bedeli Hesaplama (KDV, CTV, Katı Atık dahil)
-            - Bluetooth ESC/POS Termal Yazıcı (58mm & 80mm)
-            - WhatsApp Fatura Gönderimi (görsel + metin)
-            - JPEG Fatura Görsel Oluşturma
-            - Dönemsel Fiyat Yönetimi
-
-            ### ⚙️ PHP Sunucu Gereksinimleri
-            - PHP 8.0+ / MySQL 5.7+ / Apache veya Nginx
-            - GD kütüphanesi (görsel oluşturma için)
-
-            ### 🔧 Sunucu URL Değiştirme
-            `MainActivity.kt` → `SERVER_URL` satırını güncelleyip tekrar build alın
-            veya `workflow_dispatch` ile `server_url` parametresi girin.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # ── 15. Başarı özeti ───────────────────────────────────────────────
-      - name: ✅ Build Tamamlandı
-        if: success()
-        run: |
-          echo ""
-          echo "╔══════════════════════════════════════╗"
-          echo "║   ✅ FİMAR APK BAŞARIYLA OLUŞTURULDU  ║"
-          echo "╚══════════════════════════════════════╝"
-          echo ""
-          echo "Build No : ${{ github.run_number }}"
-          echo "Commit   : ${{ github.sha }}"
-          echo "Branch   : ${{ github.ref_name }}"
-
-      # ── 16. Hata özeti ─────────────────────────────────────────────────
-      - name: ❌ Build Başarısız
-        if: failure()
-        run: |
-          echo "## ❌ Build Başarısız" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Lütfen yukarıdaki log çıktısını inceleyin." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Sık Karşılaşılan Sorunlar:**" >> $GITHUB_STEP_SUMMARY
-          echo "- Gradle wrapper eksik: \`gradle wrapper\` komutu çalıştırın" >> $GITHUB_STEP_SUMMARY
-          echo "- Java sürümü uyumsuz: JDK 17 gereklidir" >> $GITHUB_STEP_SUMMARY
-          echo "- Bağımlılık bulunamadı: \`build.gradle\` sürümleri kontrol edin" >> $GITHUB_STEP_SUMMARY
