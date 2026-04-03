@@ -1,6 +1,6 @@
 pluginManagement {
     repositories {
-        google()            // Filtreleri kaldırdık, her şeyi çekebilsin
+        google()            // En üstte olmalı
         mavenCentral()
         gradlePluginPortal()
     }
@@ -10,8 +10,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // Eğer özel bir kütüphane kullanıyorsan jitpack eklemek gerekebilir:
-        // maven { url 'https://jitpack.io' }
     }
 }
 
