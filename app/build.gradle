@@ -18,12 +18,8 @@ android {
         manifestPlaceholders = [appLabel: "FİMAR Su"]
     }
 
-    // İmza yapılandırmalarını devre dışı bırakıyoruz
-    signingConfigs {
-        debug {
-            // Boş bırakıyoruz, aşağıda null atayacağız
-        }
-    }
+    // signingConfigs BLOĞUNU TAMAMEN SİLDİK
+    // GitHub Actions'da dosya olmadığı için hata veriyordu.
 
     buildTypes {
         debug {
@@ -31,8 +27,7 @@ android {
             versionNameSuffix "-debug"
             debuggable true
             
-            // KRİTİK: GitHub Actions'da keystore hatası almamak için imza kontrolünü kapatıyoruz.
-            // APK "unsigned" (imzasız) olarak üretilecek.
+            // İmza yapılandırmasını boş bırakıyoruz
             signingConfig null 
             
             buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
@@ -42,7 +37,7 @@ android {
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             
-            // Release build'de de GitHub ortamında hata vermemesi için null geçiyoruz
+            // Release'i de şimdilik imzasız geçiyoruz
             signingConfig null
             
             buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
@@ -85,8 +80,6 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0'
     
-    // JSON kütüphanesi
     implementation 'org.json:json:20240303' 
-
     implementation 'androidx.multidex:multidex:2.0.1'
 }
