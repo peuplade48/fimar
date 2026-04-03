@@ -1,17 +1,22 @@
-pluginManagement {
+// /home/runner/work/fimar/fimar/build.gradle (ANA DİZİN)
+buildscript {
     repositories {
-        google()            // İlk sırada bu olmalı
+        google()
         mavenCentral()
-        gradlePluginPortal()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.4.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22"
     }
 }
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+
+allprojects {
     repositories {
         google()
         mavenCentral()
     }
 }
 
-rootProject.name = "FimarSu"
-include ':app'
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
