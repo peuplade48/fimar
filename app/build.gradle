@@ -18,26 +18,10 @@ android {
         manifestPlaceholders = [appLabel: "FİMAR Su"]
     }
 
+    // İmza yapılandırmalarını devre dışı bırakıyoruz (GitHub Actions'da dosya yok)
     signingConfigs {
-        // GitHub Actions'da debug.keystore dosyası yoksa bu bloğu hiç oluşturmuyoruz
-        if (file("debug.keystore").exists()) {
-            debug {
-                storeFile file("debug.keystore")
-                storePassword "android"
-                keyAlias "androiddebugkey"
-                keyPassword "android"
-            }
-        }
-
-        // Release imza dosyası kontrolü
-        def ksFile = project.hasProperty("KEYSTORE_FILE") ? file(KEYSTORE_FILE) : file("fimar-release.keystore")
-        if (ksFile.exists()) {
-            release {
-                storeFile ksFile
-                storePassword project.hasProperty("KEYSTORE_PASS") ? KEYSTORE_PASS : ""
-                keyAlias project.hasProperty("KEY_ALIAS") ? KEY_ALIAS : ""
-                keyPassword project.hasProperty("KEY_PASS") ? KEY_PASS : ""
-            }
+        debug {
+            // Boş bırakıyoruz
         }
     }
 
@@ -46,16 +30,21 @@ android {
             applicationIdSuffix ".debug"
             versionNameSuffix "-debug"
             debuggable true
-            // Eğer yukarıda debug config'i oluştuysa kullan, yoksa null geç (Hata vermez)
-            signingConfig (signingConfigs.hasProperty("debug") ? signingConfigs.debug : null)
+            
+            // KRİTİK: İmza kontrolünü tamamen kapatıyoruz. 
+            // Bu sayede "keystore not found" hatası almazsın.
+            signingConfig null 
+            
             buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
         }
         release {
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            // Eğer yukarıda release config'i oluştuysa kullan, yoksa null geç
-            signingConfig (signingConfigs.hasProperty("release") ? signingConfigs.release : null)
+            
+            // Release için de imza yoksa hata vermemesi için null geçiyoruz
+            signingConfig null
+            
             buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
         }
     }
@@ -99,5 +88,5 @@ dependencies {
     // JSON kütüphanesi
     implementation 'org.json:json:20240303' 
 
-    implementation 'androidx.multidex:multidex:2.0.1'
+    implementation 'androidx.multidex:multidex:20.1'
 }
