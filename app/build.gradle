@@ -1,6 +1,6 @@
 plugins {
     id 'com.android.application'
-    id 'org.jetbrains.kotlin.android' // 'kotlin-android' yerine modern kullanımı budur
+    id 'org.jetbrains.kotlin.android'
 }
 
 android {
@@ -20,17 +20,23 @@ android {
 
     signingConfigs {
         debug {
-            storeFile file("debug.keystore")
-            storePassword "android"
-            keyAlias "androiddebugkey"
-            keyPassword "android"
+            // GitHub Actions'da dosya yoksa hata vermemesi için kontrol ekliyoruz
+            if (file("debug.keystore").exists()) {
+                storeFile file("debug.keystore")
+                storePassword "android"
+                keyAlias "androiddebugkey"
+                keyPassword "android"
+            }
         }
         release {
-            // GitHub Actions'dan gelen verilerle kontrol
-            storeFile project.hasProperty("KEYSTORE_FILE") ? file(KEYSTORE_FILE) : file("debug.keystore")
-            storePassword project.hasProperty("KEYSTORE_PASS") ? KEYSTORE_PASS : "android"
-            keyAlias project.hasProperty("KEY_ALIAS") ? KEY_ALIAS : "androiddebugkey"
-            keyPassword project.hasProperty("KEY_PASS") ? KEY_PASS : "android"
+            // Keystore dosyası varsa imzalar, yoksa debug imzasını veya boş geçer
+            def ksFile = project.hasProperty("KEYSTORE_FILE") ? file(KEYSTORE_FILE) : file("debug.keystore")
+            if (ksFile.exists()) {
+                storeFile ksFile
+                storePassword project.hasProperty("KEYSTORE_PASS") ? KEYSTORE_PASS : "android"
+                keyAlias project.hasProperty("KEY_ALIAS") ? KEY_ALIAS : "androiddebugkey"
+                keyPassword project.hasProperty("KEY_PASS") ? KEY_PASS : "android"
+            }
         }
     }
 
@@ -39,14 +45,17 @@ android {
             applicationIdSuffix ".debug"
             versionNameSuffix "-debug"
             debuggable true
-            signingConfig signingConfigs.debug
+            // Dosya varsa imzala, yoksa imzasız (unsigned) devam et
+            signingConfig file("debug.keystore").exists() ? signingConfigs.debug : null
             buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
         }
         release {
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            // Release imza dosyası yoksa hata vermemesi için null kontrolü
+            def releaseExists = project.hasProperty("KEYSTORE_FILE") && file(KEYSTORE_FILE).exists()
+            signingConfig releaseExists ? signingConfigs.release : null
             buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
         }
     }
@@ -66,7 +75,6 @@ android {
         viewBinding = true
     }
 
-    // Modern Gradle'da 'packagingOptions' yerine 'packaging' kullanılır
     packaging {
         resources {
             excludes += ['/META-INF/{AL2.0,LGPL2.1}', 'META-INF/DEPENDENCIES']
@@ -88,8 +96,7 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0'
     
-    // JSON kütüphanesini Android zaten içerir, ancak özel bir sürüm lazımsa kalsın.
-    // Çakışma olursa bu satırı yorum satırı yapabilirsin.
+    // JSON kütüphanesi
     implementation 'org.json:json:20240303' 
 
     implementation 'androidx.multidex:multidex:2.0.1'
