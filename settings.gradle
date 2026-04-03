@@ -1,22 +1,17 @@
 pluginManagement {
     repositories {
-        google {
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
-                includeGroupByRegex("androidx.*")
-            }
-        }
+        google()            // Filtreleri kaldırdık, her şeyi çekebilsin
         mavenCentral()
         gradlePluginPortal()
     }
 }
-
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
+        // Eğer özel bir kütüphane kullanıyorsan jitpack eklemek gerekebilir:
+        // maven { url 'https://jitpack.io' }
     }
 }
 
