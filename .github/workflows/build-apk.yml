@@ -97,12 +97,17 @@ jobs:
               -keypass android \
               -dname "CN=Android Debug,O=Android,C=US"
             echo "✓ Debug keystore oluşturuldu"
-          fi
-      # ── 8. Release Keystore (secret varsa) ────────────────────────────
+            
+         # ── 8. Release Keystore (secret varsa) ────────────────────────────
       - name: 🔑 Release Keystore Hazırla
-        if: (github.event.inputs.build_type == 'release' || startsWith(github.ref, 'refs/tags/v')) && secrets.KEYSTORE_BASE64 != ''
+        env:
+          MY_KEYSTORE_SECRET: ${{ secrets.KEYSTORE_BASE64 }}
+        # secrets yerine artık env kullanıyoruz
+        if: |
+          (github.event.inputs.build_type == 'release' || startsWith(github.ref, 'refs/tags/v')) && 
+          env.MY_KEYSTORE_SECRET != ''
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/fimar-release.keystore
+          echo "$MY_KEYSTORE_SECRET" | base64 --decode > app/fimar-release.keystore
           echo "✓ Release keystore decode edildi"
 
       # ── 9. Debug APK Build ─────────────────────────────────────────────
