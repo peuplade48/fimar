@@ -4,6 +4,7 @@ plugins {
 }
 
 android {
+    // Namespace ve SDK ayarları
     namespace 'com.fimar'
     compileSdk 34
 
@@ -18,7 +19,7 @@ android {
         manifestPlaceholders = [appLabel: "FİMAR Su"]
     }
 
-    // signingConfigs BLOĞUNU TAMAMEN SİLDİK
+    // DİKKAT: signingConfigs bloğunu tamamen kaldırdık. 
     // GitHub Actions'da dosya olmadığı için hata veriyordu.
 
     buildTypes {
@@ -27,7 +28,8 @@ android {
             versionNameSuffix "-debug"
             debuggable true
             
-            // İmza yapılandırmasını boş bırakıyoruz
+            // KRİTİK: GitHub Actions'da keystore hatası almamak için imza kontrolünü kapatıyoruz.
+            // APK "unsigned" (imzasız) olarak üretilecek.
             signingConfig null 
             
             buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
@@ -37,7 +39,7 @@ android {
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             
-            // Release'i de şimdilik imzasız geçiyoruz
+            // Release build'de de GitHub ortamında hata vermemesi için null geçiyoruz
             signingConfig null
             
             buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
@@ -65,6 +67,7 @@ android {
         }
     }
 
+    // Kaynak (Resource) hatalarını (a.png gibi) build'i durdurmaması için esnetiyoruz
     lint {
         abortOnError false
         checkReleaseBuilds false
@@ -80,6 +83,8 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0'
     
+    // JSON kütüphanesi
     implementation 'org.json:json:20240303' 
+
     implementation 'androidx.multidex:multidex:2.0.1'
 }
