@@ -35,40 +35,46 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # ── 1. ADIM: GERÇEK PROJE DİZİNİNİ BUL ───────────────────────────
-      - name: 🔍 Proje Klasörünü Tespit Et
+      # ── 1. ADIM: PROJE DOSYALARINI DOĞRU YERE TAŞI (Hata Çözücü) ──────
+      - name: 🛠️ Proje Yapısını Düzelt
         run: |
-          # build.gradle dosyasının (genelde app klasörünün içinde olur) yerini bulalım
-          # Bu sayede 'app' klasörünün bir üst dizinini 'ROOT' kabul edeceğiz.
-          REAL_APP_DIR=$(find . -name "build.gradle" -not -path "*/android/*" | head -n 1)
-          if [ -z "$REAL_APP_DIR" ]; then
-            # Eğer yukarıdaki bulamazsa herhangi birini al
-            REAL_APP_DIR=$(find . -name "build.gradle" | head -n 1)
+          # Eğer her şey 'android' klasörünün içindeyse dışarı çıkar
+          if [ -d "android" ]; then
+            echo "Dosyalar android klasöründen ana dizine taşınıyor..."
+            cp -r android/* .
+            rm -rf android
           fi
           
-          PROJECT_ROOT=$(dirname $(dirname "$REAL_APP_DIR"))
-          # Eğer dirname sonucu '.' çıkarsa ana dizindir
-          if [ "$PROJECT_ROOT" == "." ]; then PROJECT_ROOT=$(pwd); fi
-          
-          echo "PROJECT_ROOT=$PROJECT_ROOT" >> $GITHUB_ENV
-          echo "Bulunan Proje Kökü: $PROJECT_ROOT"
+          # Eğer 'app' klasörü yoksa ama 'fimar' veya başka isimde bir klasör varsa onu 'app' yap
+          if [ ! -d "app" ]; then
+             # İçinde build.gradle olan ilk klasörü 'app' olarak adlandır
+             POTENTIAL_APP=$(find . -maxdepth 2 -name "build.gradle" -not -path "./build.gradle" | head -n 1 | cut -d '/' -f 2)
+             if [ ! -z "$POTENTIAL_APP" ] && [ "$POTENTIAL_APP" != "app" ]; then
+                mv "$POTENTIAL_APP" app
+                echo "Klasör ismi düzeltildi: $POTENTIAL_APP -> app"
+             fi
+          fi
 
-      # ── 2. ADIM: WRAPPER TAMİRİ ──────────────────────────────────────
-      - name: 🛠️ Gradle Wrapper Hazırla
+      # ── 2. ADIM: WRAPPER VE SETTINGS TAMİRİ ──────────────────────────
+      - name: 🛠️ Gradle Yapılandırmasını Sıfırla
         run: |
-          cd ${{ env.PROJECT_ROOT }}
-          # Mevcut bir wrapper varsa silip temiz kuralım (jar hatasını çözer)
+          # Mevcut wrapper'ları temizle
           rm -rf gradle/ gradlew gradlew.bat
+          # Yeni wrapper oluştur
           gradle wrapper --gradle-version 8.2
           chmod +x ./gradlew
+          
+          # settings.gradle dosyasını garantiye al
+          echo "include ':app'" > settings.gradle
+          echo "rootProject.name = 'fimar'" >> settings.gradle
 
       # ── 3. ADIM: URL GÜNCELLEME ──────────────────────────────────────
       - name: 🌐 Sunucu URL Güncelle
         if: github.event.inputs.server_url != ''
         run: |
           SERVER="${{ github.event.inputs.server_url }}"
-          find ${{ env.PROJECT_ROOT }} -name "MainActivity.kt" -exec sed -i "s|private val SERVER_URL = \".*\"|private val SERVER_URL = \"$SERVER\"|g" {} +
-          find ${{ env.PROJECT_ROOT }} -name "build.gradle" -exec sed -i "s|\"http://192.168.1.100/fimar/index.php\"|\"$SERVER\"|g" {} +
+          find . -name "MainActivity.kt" -exec sed -i "s|private val SERVER_URL = \".*\"|private val SERVER_URL = \"$SERVER\"|g" {} +
+          find . -name "build.gradle" -exec sed -i "s|\"http://192.168.1.100/fimar/index.php\"|\"$SERVER\"|g" {} +
 
       # ── 4. ADIM: KEYSTORE HAZIRLA ────────────────────────────────────
       - name: 🔑 Release Keystore Hazırla
@@ -76,15 +82,12 @@ jobs:
           MY_KEYSTORE_SECRET: ${{ secrets.KEYSTORE_BASE64 }}
         if: (github.event.inputs.build_type == 'release' || startsWith(github.ref, 'refs/tags/v')) && env.MY_KEYSTORE_SECRET != ''
         run: |
-          APP_DIR=$(find ${{ env.PROJECT_ROOT }} -name "app" -type d | head -n 1)
-          echo "$MY_KEYSTORE_SECRET" | base64 --decode > "$APP_DIR/fimar-release.keystore"
+          echo "$MY_KEYSTORE_SECRET" | base64 --decode > app/fimar-release.keystore
 
-      # ── 5. ADIM: DERLEME (BUILD) ─────────────────────────────────────
+      # ── 5. ADIM: BUILD ───────────────────────────────────────────────
       - name: 🛠️ APK Build
         run: |
-          cd ${{ env.PROJECT_ROOT }}
           BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
-          
           if [ "$BUILD_TYPE" == "release" ] || [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             ./gradlew assembleRelease --no-daemon \
               -PKEYSTORE_FILE="fimar-release.keystore" \
@@ -96,7 +99,7 @@ jobs:
             ./gradlew assembleDebug --no-daemon -Porg.gradle.jvmargs="-Xmx3g"
           fi
 
-      # ── 6. ADIM: ÇIKTILARI AL ────────────────────────────────────────
+      # ── 6. ADIM: ARTIFACTS ───────────────────────────────────────────
       - name: 📤 APK Kaydet
         uses: actions/upload-artifact@v4
         with:
