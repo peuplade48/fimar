@@ -43,12 +43,13 @@ jobs:
             rm -rf android
           fi
 
-      # ── 2. ADIM: GRADLE HAZIRLA (DOSYALARI BOZMADAN) ──────────────────
+      # ── 2. ADIM: GRADLE HAZIRLA (GÜNCEL SÜRÜM 8.7) ──────────────────
       - name: 🛠️ Gradle Wrapper Hazırla
         run: |
-          # Mevcut wrapper'ı temizleyip 8.2 sürümünü garantiye alalım
+          # Mevcut wrapper'ı temizle
           rm -rf gradle/ gradlew gradlew.bat
-          gradle wrapper --gradle-version 8.2
+          # AGP 8.4.0 için en az 8.6 gerekir, biz 8.7 kuruyoruz
+          gradle wrapper --gradle-version 8.7
           chmod +x ./gradlew
 
       # ── 3. ADIM: URL GÜNCELLEME ──────────────────────────────────────
@@ -64,7 +65,6 @@ jobs:
           MY_KEYSTORE_SECRET: ${{ secrets.KEYSTORE_BASE64 }}
         if: (github.event.inputs.build_type == 'release' || startsWith(github.ref, 'refs/tags/v')) && env.MY_KEYSTORE_SECRET != ''
         run: |
-          # app klasörünün varlığından emin olalım
           mkdir -p app
           echo "$MY_KEYSTORE_SECRET" | base64 --decode > app/fimar-release.keystore
 
