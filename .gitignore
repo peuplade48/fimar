@@ -12,5 +12,6 @@ local.properties
 *.keystore
 *.jks
 !app/debug.keystore
+!app/release-key.jks
 # Builds
 app/build/
