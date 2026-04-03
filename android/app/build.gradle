@@ -18,23 +18,14 @@ android {
         manifestPlaceholders = [appLabel: "FİMAR Su"]
     }
 
-    // GitHub Actions ortamında hata vermeyen ama imza üreten blok
-    signingConfigs {
-        debug {
-            // Android'in varsayılan debug anahtar bilgilerini zorla tanımlıyoruz
-            storeFile file("debug.keystore")
-            storePassword "android"
-            keyAlias "androiddebugkey"
-            keyPassword "android"
-        }
-    }
-
     buildTypes {
         debug {
             applicationIdSuffix ".debug"
             versionNameSuffix "-debug"
             debuggable true
-            // Telefona yüklenebilmesi için imza şart
+            
+            // GitHub Actions'da dosya hatası almamak için 
+            // ve telefonun kabul etmesi için imza zorunluluğunu esnetiyoruz
             signingConfig signingConfigs.debug
             
             buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
@@ -44,7 +35,7 @@ android {
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             
-            // Release build'i de Actions'da bu imza ile paketliyoruz ki telefon kabul etsin
+            // Release build'i de test için debug imzasıyla paketliyoruz
             signingConfig signingConfigs.debug
             
             buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
