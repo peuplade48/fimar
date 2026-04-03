@@ -3,12 +3,6 @@ name: 🔨 FİMAR APK Build
 on:
   push:
     branches: [ main, master ]
-    paths:
-      - 'android/**'
-      - '.github/workflows/build-apk.yml'
-      - 'app/**'
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
     inputs:
       build_type:
@@ -16,11 +10,9 @@ on:
         required: true
         default: 'debug'
         type: choice
-        options:
-          - debug
-          - release
+        options: [debug, release]
       server_url:
-        description: 'Örn: https://falzer5.peuplade.com.tr'
+        description: 'Sunucu URL'
         required: false
         default: ''
 
@@ -29,97 +21,74 @@ env:
 
 jobs:
   build:
-    name: 📦 APK Oluştur (${{ github.event.inputs.build_type || 'debug' }})
+    name: 📦 APK Oluştur
     runs-on: ubuntu-latest
 
     steps:
-      # ── 1. Kod al ──────────────────────────────────────────────────────
-      - name: 📥 Kodu İndir (Checkout)
+      - name: 📥 Kodu İndir
         uses: actions/checkout@v4
 
-      # ── 2. JDK Kur ─────────────────────────────────────────────────────
-      - name: ☕ JDK ${{ env.JAVA_VERSION }} Kur
+      - name: ☕ JDK Kur
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: 'temurin'
           cache: gradle
 
-      # ── 3. Eksik Wrapper Dosyalarını Tamir Et (KRİTİK ADIM) ─────────────
-      # Projenizde gradle-wrapper.jar eksik olduğu için bu adım onu oluşturur.
-      - name: 🛠️ Gradle Wrapper'ı Sıfırdan Oluştur
+      # ── KRİTİK DÜZELTME: Doğru Dizin Tespiti ──────────────────────────
+      - name: 🔍 Proje Dizinini Tespit Et ve Hazırla
         run: |
+          # settings.gradle dosyasının nerede olduğunu bulalım
+          SETTINGS_PATH=$(find . -name "settings.gradle" | head -n 1)
+          PROJECT_ROOT=$(dirname "$SETTINGS_PATH")
+          echo "PROJECT_ROOT=$PROJECT_ROOT" >> $GITHUB_ENV
+          
+          # O dizine gidip wrapper oluşturalım
+          cd "$PROJECT_ROOT"
           gradle wrapper --gradle-version 8.2
           chmod +x ./gradlew
-          echo "✅ Gradle Wrapper ve JAR dosyası oluşturuldu."
+          echo "✅ Proje kök dizini $PROJECT_ROOT olarak belirlendi ve hazırlandı."
 
-      # ── 4. Dosya Yapısını Listele (Hata Ayıklama) ───────────────────────
-      - name: 📂 Dosya Yapısını Kontrol Et
-        run: ls -R
-
-      # ── 5. Sunucu URL Güncelle (Opsiyonel) ─────────────────────────────
+      # ── Sunucu URL Güncelle (Opsiyonel) ─────────────────────────────
       - name: 🌐 Sunucu URL Güncelle
         if: github.event.inputs.server_url != ''
         run: |
           SERVER="${{ github.event.inputs.server_url }}"
-          TARGET_FILE=$(find . -name "MainActivity.kt")
-          GRADLE_FILE=$(find . -name "build.gradle")
-          
-          if [ ! -z "$TARGET_FILE" ]; then
-            sed -i "s|private val SERVER_URL = \".*\"|private val SERVER_URL = \"$SERVER\"|g" "$TARGET_FILE"
-          fi
-          if [ ! -z "$GRADLE_FILE" ]; then
-            sed -i "s|\"http://192.168.1.100/fimar/index.php\"|\"$SERVER\"|g" "$GRADLE_FILE"
-          fi
+          find . -name "MainActivity.kt" -exec sed -i "s|private val SERVER_URL = \".*\"|private val SERVER_URL = \"$SERVER\"|g" {} +
+          find . -name "build.gradle" -exec sed -i "s|\"http://192.168.1.100/fimar/index.php\"|\"$SERVER\"|g" {} +
 
-      # ── 6. Release Keystore Hazırla (Secret'tan) ───────────────────────
+      # ── Release Keystore Hazırla ────────────────────────────────────
       - name: 🔑 Release Keystore Hazırla
         env:
           MY_KEYSTORE_SECRET: ${{ secrets.KEYSTORE_BASE64 }}
         if: (github.event.inputs.build_type == 'release' || startsWith(github.ref, 'refs/tags/v')) && env.MY_KEYSTORE_SECRET != ''
         run: |
-          APP_PATH=$(find . -name "app" -type d | head -n 1)
-          echo "$MY_KEYSTORE_SECRET" | base64 --decode > "$APP_PATH/fimar-release.keystore"
-          echo "✓ Keystore $APP_PATH dizinine yüklendi."
+          APP_DIR=$(find . -name "app" -type d | head -n 1)
+          echo "$MY_KEYSTORE_SECRET" | base64 --decode > "$APP_DIR/fimar-release.keystore"
 
-      # ── 7. APK Build (Debug) ───────────────────────────────────────────
-      - name: 🛠️ Debug APK Oluştur
-        if: github.event.inputs.build_type != 'release' || github.event_name != 'workflow_dispatch'
+      # ── APK Build (Dinamik Dizinle) ──────────────────────────────────
+      - name: 🛠️ APK Build
         run: |
-          ./gradlew assembleDebug --no-daemon -Porg.gradle.jvmargs="-Xmx3g"
-
-      # ── 8. APK Build (Release) ─────────────────────────────────────────
-      - name: 🚀 Release APK Oluştur
-        if: github.event.inputs.build_type == 'release' || startsWith(github.ref, 'refs/tags/v')
-        run: |
-          if [ -f "app/fimar-release.keystore" ]; then
-            ./gradlew assembleRelease \
-              --no-daemon \
-              -PKEYSTORE_FILE="fimar-release.keystore" \
-              -PKEYSTORE_PASS="${{ secrets.KEYSTORE_PASSWORD }}" \
-              -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
-              -PKEY_PASS="${{ secrets.KEY_PASSWORD }}" \
-              -Porg.gradle.jvmargs="-Xmx3g"
+          cd ${{ env.PROJECT_ROOT }}
+          BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
+          
+          if [ "$BUILD_TYPE" == "release" ] || [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            if [ -f "app/fimar-release.keystore" ]; then
+              ./gradlew assembleRelease --no-daemon \
+                -PKEYSTORE_FILE="fimar-release.keystore" \
+                -PKEYSTORE_PASS="${{ secrets.KEYSTORE_PASSWORD }}" \
+                -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
+                -PKEY_PASS="${{ secrets.KEY_PASSWORD }}" \
+                -Porg.gradle.jvmargs="-Xmx3g"
+            else
+              ./gradlew assembleRelease --no-daemon -Porg.gradle.jvmargs="-Xmx3g"
+            fi
           else
-            # Keystore yoksa debug imzasıyla devam et
-            ./gradlew assembleRelease --no-daemon -Porg.gradle.jvmargs="-Xmx3g"
+            ./gradlew assembleDebug --no-daemon -Porg.gradle.jvmargs="-Xmx3g"
           fi
 
-      # ── 9. Artifacts (APK Dosyalarını Kaydet) ──────────────────────────
-      - name: 📤 APK Dosyalarını Sisteme Yükle
+      - name: 📤 APK Kaydet
         uses: actions/upload-artifact@v4
         with:
-          name: fimar-apk-build-${{ github.run_number }}
+          name: fimar-apk-${{ github.run_number }}
           path: "**/*.apk"
-          retention-days: 30
-
-      # ── 10. GitHub Release (Sadece Tag Basıldığında) ──────────────────
-      - name: 🏷️ GitHub Release Oluştur
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: "**/*.apk"
-          name: "FİMAR Su Faturası ${{ github.ref_name }}"
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
