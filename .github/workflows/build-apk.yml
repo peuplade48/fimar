@@ -19,7 +19,7 @@ on:
           - debug
           - release
       server_url:
-        description: 'PHP Sunucu URL (opsiyonel, boş bırakırsanız build.gradle kullanılır)'
+        description: 'https://falzer5.peuplade.com.tr'
         required: false
         default: ''
 
