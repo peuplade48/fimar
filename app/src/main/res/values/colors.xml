@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ── Uygulama Ana Renkleri ── -->
+    <color name="accent_cyan">#00BCD4</color>
+    <color name="accent_teal">#00897B</color>
+    <color name="accent_purple">#7C4DFF</color>
+
+    <!-- ── Arkaplan Tonları ── -->
+    <color name="bg_dark">#0A0F1E</color>
+    <color name="bg_dark2">#0F172A</color>
+    <color name="bg_card">#131D36</color>
+    <color name="bg_card2">#1A2540</color>
+
+    <!-- ── Metin Renkleri ── -->
+    <color name="text_primary">#E2E8F0</color>
+    <color name="text_secondary">#94A3B8</color>
+    <color name="text_muted">#475569</color>
+
+    <!-- ── Durum Renkleri ── -->
+    <color name="status_green">#10B981</color>
+    <color name="status_red">#EF4444</color>
+    <color name="status_yellow">#F59E0B</color>
+    <color name="status_orange">#F97316</color>
+
+    <!-- ── Kenarlık ── -->
+    <color name="border">#1E3050</color>
+    <color name="border2">#2D4A6E</color>
+
+    <!-- ── WhatsApp ── -->
+    <color name="whatsapp_green">#25D366</color>
+    <color name="whatsapp_dark">#128C7E</color>
+
+    <!-- ── Sistem (statusbar vb.) ── -->
+    <color name="colorPrimary">#0F172A</color>
+    <color name="colorPrimaryDark">#0A0F1E</color>
+    <color name="colorAccent">#00BCD4</color>
+    <color name="colorPrimaryVariant">#131D36</color>
+    <color name="colorOnPrimary">#E2E8F0</color>
+    <color name="colorSecondary">#00BCD4</color>
+    <color name="colorOnSecondary">#0A0F1E</color>
+    <color name="colorSurface">#131D36</color>
+    <color name="colorOnSurface">#E2E8F0</color>
+    <color name="colorBackground">#0A0F1E</color>
+    <color name="colorOnBackground">#E2E8F0</color>
+    <color name="colorError">#EF4444</color>
+    <color name="colorOnError">#FFFFFF</color>
+</resources>
