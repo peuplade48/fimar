@@ -4,30 +4,29 @@ plugins {
 }
 
 android {
-    namespace 'com.fimar'
+    namespace 'com.apartmantakip'
     compileSdk 35
 
     defaultConfig {
-        applicationId "com.fimar"
+        applicationId "com.apartmantakip"
         minSdk 24
         targetSdk 35
         versionCode 1
         versionName "1.0.0"
         multiDexEnabled true
 
-        manifestPlaceholders = [appLabel: "FİMAR Su"]
+        manifestPlaceholders = [appLabel: "Apartman Takip"]
     }
 
     // GitHub Actions'da dosya hatası almamak için imza yapılandırmasını dinamik yapıyoruz
     signingConfigs {
-        debug {
-            // Debug için varsayılanı kullanmaya devam et
-        }
         release {
             storeFile file("release-key.jks")
-            storePassword "fimar123"
-            keyAlias "fimar-alias"
-            keyPassword "fimar123"
+            storePassword "apartman123"
+            keyAlias "apartman-alias"
+            keyPassword "apartman123"
+            v1SigningEnabled true
+            v2SigningEnabled true
         }
     }
 
@@ -36,7 +35,8 @@ android {
             applicationIdSuffix ".debug"
             versionNameSuffix "-debug"
             debuggable true
-            signingConfig signingConfigs.debug
+            // Debug modunda da gerçek imzayı kullan
+            signingConfig signingConfigs.release
             
             buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
         }
@@ -45,7 +45,6 @@ android {
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             
-            // Gerçek imza yapılandırması
             signingConfig signingConfigs.release
             
             buildConfigField "String", "SERVER_URL", '"https://falzer4.peuplade.com.tr"'

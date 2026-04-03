@@ -83,9 +83,24 @@ jobs:
             ./gradlew assembleDebug --no-daemon -Porg.gradle.jvmargs="-Xmx3g"
           fi
 
-      # ── 6. ADIM: ARTIFACTS ───────────────────────────────────────────
-      - name: 📤 APK Kaydet
+      # ── 6. ADIM: ARTIFACTS (Geçici Kayıt) ─────────────────────────────
+      - name: 📤 APK Geçici Kaydet
         uses: actions/upload-artifact@v4
         with:
-          name: fimar-apk-${{ github.run_number }}
+          name: apartman-takip-apk-${{ github.run_number }}
           path: "app/build/outputs/apk/**/*.apk"
+
+      # ── 7. ADIM: GITHUB RELEASE (Kalıcı Yayınlama) ───────────────────
+      - name: 🚀 GitHub Release Oluştur
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/debug/*.apk
+          name: "Apartman Takip Sürüm ${{ github.ref_name }}"
+          tag_name: ${{ github.ref }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

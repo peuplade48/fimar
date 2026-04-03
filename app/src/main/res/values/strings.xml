@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">FİMAR Su</string>
-    <string name="app_description">Apartman Su Fatura Sistemi</string>
+    <string name="app_name">Apartman Su ve Aidat Takip Sistemi</string>
+    <string name="app_description">Apartman Su ve Aidat Takip Sistemi</string>
 
     <!-- Genel -->
     <string name="ok">Tamam</string>

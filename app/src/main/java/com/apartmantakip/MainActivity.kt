@@ -1,4 +1,4 @@
-package com.fimar
+package com.apartmantakip
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -15,11 +15,14 @@ import android.os.*
 import android.view.View
 import android.webkit.*
 import android.widget.*
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetCredentialResponse
@@ -58,8 +61,23 @@ class MainActivity : AppCompatActivity() {
     // ─── onCreate ────────────────────────────────────────────────────────
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        val mainView = findViewById<View>(R.id.main)
+        ViewCompat.setOnApplyWindowInsetsListener(mainView) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+            
+            v.setPadding(
+                systemBars.left, 
+                systemBars.top, 
+                systemBars.right, 
+                if (ime.bottom > 0) ime.bottom else systemBars.bottom
+            )
+            insets
+        }
 
         webView    = findViewById(R.id.webView)
         progressBar = findViewById(R.id.progressBar)
@@ -84,7 +102,7 @@ class MainActivity : AppCompatActivity() {
             displayZoomControls    = false
             cacheMode              = WebSettings.LOAD_DEFAULT
             mixedContentMode       = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-            userAgentString        = userAgentString + " FimarApp/1.0"
+            userAgentString        = userAgentString + " ApartmanTakipApp/1.0"
         }
 
         webView.addJavascriptInterface(JSBridge(), "AndroidBridge")
@@ -114,7 +132,7 @@ class MainActivity : AppCompatActivity() {
                 )
             }
             override fun onConsoleMessage(m: ConsoleMessage?): Boolean {
-                m?.let { android.util.Log.d("FimarWebView", "[${it.messageLevel()}] ${it.message()}") }
+                m?.let { android.util.Log.d("ApartmanWebView", "[${it.messageLevel()}] ${it.message()}") }
                 return true
             }
         }
@@ -188,7 +206,7 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun setSunucuAdresi(url: String) {
             runOnUiThread {
-                getSharedPreferences("fimar", Context.MODE_PRIVATE)
+                getSharedPreferences("apartman_takip", Context.MODE_PRIVATE)
                     .edit().putString("server_url", url).apply()
                 showToast("Sunucu adresi güncellendi")
             }
@@ -331,7 +349,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 val json = org.json.JSONObject(faturaJson)
                 printer.printFaturaFormatted(
-                    binaAdi       = json.optString("bina_adi", "FİMAR APARTMANI"),
+                    binaAdi       = json.optString("bina_adi", "APARTMAN YÖNETİMİ"),
                     daire         = json.optString("daire_no"),
                     kat           = json.optString("kat"),
                     sakin         = json.optString("ad_soyad", "-"),

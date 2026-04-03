@@ -1,4 +1,4 @@
-package com.fimar
+package com.apartmantakip
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
