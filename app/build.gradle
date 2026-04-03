@@ -1,6 +1,6 @@
 plugins {
     id 'com.android.application'
-    id 'kotlin-android'
+    id 'org.jetbrains.kotlin.android' // 'kotlin-android' yerine modern kullanımı budur
 }
 
 android {
@@ -8,51 +8,46 @@ android {
     compileSdk 34
 
     defaultConfig {
-        applicationId   "com.fimar"
-        minSdk          24          // Android 7.0+
-        targetSdk       34
-        versionCode     1
-        versionName     "1.0.0"
+        applicationId "com.fimar"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
         multiDexEnabled true
 
-        // Manifest placeholder
         manifestPlaceholders = [appLabel: "FİMAR Su"]
     }
 
     signingConfigs {
         debug {
-            storeFile     file("debug.keystore")
+            storeFile file("debug.keystore")
             storePassword "android"
-            keyAlias      "androiddebugkey"
-            keyPassword   "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
         }
         release {
-            // GitHub Actions'dan ortam değişkenleriyle doldurulur
-            storeFile     project.hasProperty("KEYSTORE_FILE")
-                          ? file(KEYSTORE_FILE) : file("debug.keystore")
-            storePassword project.hasProperty("KEYSTORE_PASS")
-                          ? KEYSTORE_PASS : "android"
-            keyAlias      project.hasProperty("KEY_ALIAS")
-                          ? KEY_ALIAS : "androiddebugkey"
-            keyPassword   project.hasProperty("KEY_PASS")
-                          ? KEY_PASS : "android"
+            // GitHub Actions'dan gelen verilerle kontrol
+            storeFile project.hasProperty("KEYSTORE_FILE") ? file(KEYSTORE_FILE) : file("debug.keystore")
+            storePassword project.hasProperty("KEYSTORE_PASS") ? KEYSTORE_PASS : "android"
+            keyAlias project.hasProperty("KEY_ALIAS") ? KEY_ALIAS : "androiddebugkey"
+            keyPassword project.hasProperty("KEY_PASS") ? KEY_PASS : "android"
         }
     }
 
     buildTypes {
         debug {
             applicationIdSuffix ".debug"
-            versionNameSuffix   "-debug"
-            debuggable          true
-            signingConfig       signingConfigs.debug
-            buildConfigField    "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
+            versionNameSuffix "-debug"
+            debuggable true
+            signingConfig signingConfigs.debug
+            buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
         }
         release {
-            minifyEnabled       false
-            shrinkResources     false
-            proguardFiles       getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig       signingConfigs.release
-            buildConfigField    "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+            buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
         }
     }
 
@@ -62,16 +57,17 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget      = '17'
+        jvmTarget = '17'
         freeCompilerArgs += ["-opt-in=kotlin.RequiresOptIn"]
     }
 
     buildFeatures {
-        buildConfig   = true
-        viewBinding   = true
+        buildConfig = true
+        viewBinding = true
     }
 
-    packagingOptions {
+    // Modern Gradle'da 'packagingOptions' yerine 'packaging' kullanılır
+    packaging {
         resources {
             excludes += ['/META-INF/{AL2.0,LGPL2.1}', 'META-INF/DEPENDENCIES']
         }
@@ -84,20 +80,17 @@ android {
 }
 
 dependencies {
-    // AndroidX Core
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.webkit:webkit:1.11.0'
     implementation 'com.google.android.material:material:1.12.0'
-
-    // Coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0'
+    
+    // JSON kütüphanesini Android zaten içerir, ancak özel bir sürüm lazımsa kalsın.
+    // Çakışma olursa bu satırı yorum satırı yapabilirsin.
+    implementation 'org.json:json:20240303' 
 
-    // JSON
-    implementation 'org.json:json:20240303'
-
-    // MultiDex
     implementation 'androidx.multidex:multidex:2.0.1'
 }
