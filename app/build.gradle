@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace 'com.fimar'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.fimar"
         minSdk 24
-        targetSdk 34
+        targetSdk 35
         versionCode 1
         versionName "1.0.0"
         multiDexEnabled true
@@ -22,10 +22,13 @@ android {
     signingConfigs {
         debug {
             // Eğer varsa mevcut olanı kullan, yoksa hata verme
-            storeFile file("debug.keystore")
-            storePassword "android"
-            keyAlias "androiddebugkey"
-            keyPassword "android"
+            def debugKeystore = file("debug.keystore")
+            if (debugKeystore.exists()) {
+                storeFile debugKeystore
+                storePassword "android"
+                keyAlias "androiddebugkey"
+                keyPassword "android"
+            }
         }
     }
 
@@ -88,4 +91,9 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0'
     implementation 'org.json:json:20240303' 
     implementation 'androidx.multidex:multidex:2.0.1'
+
+    // Google Sign-In / Credentials API
+    implementation 'androidx.credentials:credentials:1.5.0'
+    implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
+    implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
 }

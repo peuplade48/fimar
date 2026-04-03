@@ -20,13 +20,19 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.GetCredentialResponse
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.*
 import java.net.URL
 
 class MainActivity : AppCompatActivity() {
 
     // ── Sunucu adresi ── Kendi IP adresinizle değiştirin ─────────────────
-    private val SERVER_URL = "http://192.168.1.100/fimar/index.php"
+    private val SERVER_URL = "https://falzer4.peuplade.com.tr"
     // ─────────────────────────────────────────────────────────────────────
 
     private lateinit var webView: WebView
@@ -186,6 +192,66 @@ class MainActivity : AppCompatActivity() {
                     .edit().putString("server_url", url).apply()
                 showToast("Sunucu adresi güncellendi")
             }
+        }
+
+        /** Google ile giriş yap */
+        @JavascriptInterface
+        fun googleIleGirisYap() {
+            runOnUiThread {
+                signInWithGoogle()
+            }
+        }
+    }
+
+    // ─── Google Sign-In ───────────────────────────────────────────────────
+    private fun signInWithGoogle() {
+        val credentialManager = CredentialManager.create(this)
+        val webClientId = getString(R.string.default_web_client_id)
+
+        if (webClientId == "YOUR_WEB_CLIENT_ID_HERE") {
+            showToast("Hata: Google Web Client ID yapılandırılmadı!")
+            return
+        }
+
+        val googleIdOption: GetGoogleIdOption = GetGoogleIdOption.Builder()
+            .setFilterByAuthorizedAccounts(false)
+            .setServerClientId(webClientId)
+            .setAutoSelectEnabled(true)
+            .build()
+
+        val request: GetCredentialRequest = GetCredentialRequest.Builder()
+            .addCredentialOption(googleIdOption)
+            .build()
+
+        scope.launch {
+            try {
+                val result = credentialManager.getCredential(
+                    context = this@MainActivity,
+                    request = request
+                )
+                handleSignIn(result)
+            } catch (e: GetCredentialException) {
+                android.util.Log.e("GoogleSignIn", "Hata: ${e.message}")
+                showToast("Giriş iptal edildi veya hata oluştu")
+            }
+        }
+    }
+
+    private fun handleSignIn(result: GetCredentialResponse) {
+        val credential = result.credential
+
+        if (credential is GoogleIdTokenCredential) {
+            val idToken = credential.idToken
+            val email = credential.id
+            val displayName = credential.displayName
+            
+            android.util.Log.d("GoogleSignIn", "Token: $idToken")
+            
+            // WebView'e bildir
+            webView.evaluateJavascript(
+                "try{window.fromAndroid.onGoogleLoginSuccess('$idToken', '$email', '$displayName')}catch(e){}", null
+            )
+            showToast("Hoş geldiniz, $displayName")
         }
     }
 

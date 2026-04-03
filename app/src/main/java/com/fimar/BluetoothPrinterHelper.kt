@@ -1,5 +1,6 @@
 package com.fimar
 
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import java.io.IOException
@@ -49,6 +50,8 @@ class BluetoothPrinterHelper(private val device: BluetoothDevice) {
         // Karakter genişlikleri
         const val WIDTH_58MM = 32
         const val WIDTH_80MM = 48
+
+        private const val CMD_THANKS = "Tesekkur Ederiz!\n"
     }
 
     // ── Bağlantı ────────────────────────────────────────────────────────
@@ -190,15 +193,10 @@ class BluetoothPrinterHelper(private val device: BluetoothDevice) {
         // ── Footer ──────────────────────────────────────────────────────
         stream.write(CMD_ALIGN_CENTER)
         stream.write("Tarih: $tarih\n".toByteArray(ENC))
-        stream.write(CMD_CMD_THANKS.toByteArray(ENC))
+        stream.write(CMD_THANKS.toByteArray(ENC))
 
         stream.write(CMD_FEED_N)
         stream.write(CMD_CUT_FULL)
         stream.flush()
-    }
-
-    // Küçük yardımcı sabit
-    private companion object {
-        const val CMD_CMD_THANKS = "Tesekkur Ederiz!\n"
     }
 }
