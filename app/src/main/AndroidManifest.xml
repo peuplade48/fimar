@@ -1,14 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    package="com.fimar">
-
-    <!-- ── İnternet ── -->
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 
-    <!-- ── Bluetooth (API ≤ 30) ── -->
     <uses-permission
         android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30" />
@@ -16,7 +12,6 @@
         android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
 
-    <!-- ── Bluetooth (API 31+) ── -->
     <uses-permission
         android:name="android.permission.BLUETOOTH_CONNECT"
         tools:targetApi="S" />
@@ -25,7 +20,6 @@
         android:usesPermissionFlags="neverForLocation"
         tools:targetApi="S" />
 
-    <!-- ── Depolama ── -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
@@ -34,7 +28,6 @@
         android:maxSdkVersion="28"
         tools:ignore="ScopedStorage" />
 
-    <!-- ── Özellik bildirimleri ── -->
     <uses-feature
         android:name="android.hardware.bluetooth"
         android:required="false" />
@@ -54,7 +47,6 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
 
-        <!-- ── Ana Aktivite ── -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -67,7 +59,6 @@
             </intent-filter>
         </activity>
 
-        <!-- ── FileProvider (WhatsApp görsel paylaşımı) ── -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
