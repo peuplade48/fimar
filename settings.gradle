@@ -1,6 +1,6 @@
 pluginManagement {
     repositories {
-        google()            // En üstte olmalı
+        google()            // İlk sırada bu olmalı
         mavenCentral()
         gradlePluginPortal()
     }
