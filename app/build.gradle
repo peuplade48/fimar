@@ -18,10 +18,10 @@ android {
         manifestPlaceholders = [appLabel: "FİMAR Su"]
     }
 
-    // İmza yapılandırmalarını devre dışı bırakıyoruz (GitHub Actions'da dosya yok)
+    // İmza yapılandırmalarını devre dışı bırakıyoruz
     signingConfigs {
         debug {
-            // Boş bırakıyoruz
+            // Boş bırakıyoruz, aşağıda null atayacağız
         }
     }
 
@@ -31,8 +31,8 @@ android {
             versionNameSuffix "-debug"
             debuggable true
             
-            // KRİTİK: İmza kontrolünü tamamen kapatıyoruz. 
-            // Bu sayede "keystore not found" hatası almazsın.
+            // KRİTİK: GitHub Actions'da keystore hatası almamak için imza kontrolünü kapatıyoruz.
+            // APK "unsigned" (imzasız) olarak üretilecek.
             signingConfig null 
             
             buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
@@ -42,7 +42,7 @@ android {
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             
-            // Release için de imza yoksa hata vermemesi için null geçiyoruz
+            // Release build'de de GitHub ortamında hata vermemesi için null geçiyoruz
             signingConfig null
             
             buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
@@ -88,5 +88,5 @@ dependencies {
     // JSON kütüphanesi
     implementation 'org.json:json:20240303' 
 
-    implementation 'androidx.multidex:multidex:20.1'
+    implementation 'androidx.multidex:multidex:2.0.1'
 }
