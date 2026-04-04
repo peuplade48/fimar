@@ -1,5 +1,5 @@
 Apartman Su Faturası Yönetim Sistemi (Android & Web)
-FİMAR, apartman ve site yöneticilerinin su sayaçlarını yerinde okuyup faturaya dönüştürmelerini sağlayan, Kotlin ile geliştirilmiş bir mobil uygulama ve PHP tabanlı bir yönetim panelinden oluşan hibrit bir sistemdir.
+Apartman ve site yöneticilerinin su sayaçlarını yerinde okuyup faturaya dönüştürmelerini sağlayan, Kotlin ile geliştirilmiş bir mobil uygulama ve PHP tabanlı bir yönetim panelinden oluşan hibrit bir sistemdir.
 
 📱 Uygulama Akışı
 Kullanıcı Kaydı: Yöneticiler uygulama üzerinden hesap oluşturur ve apartman bilgilerini tanımlar.
