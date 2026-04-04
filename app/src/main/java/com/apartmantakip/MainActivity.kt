@@ -89,31 +89,37 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         webView.loadUrl(SERVER_URL)
 
-        // Android 13+ (API 33) ve üzeri için geri tuşu kaydı
+        // 1. Android 13+ JESTLERİ İÇİN (Xiaomi vb.) - EN YÜKSEK ÖNCELİK
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             onBackInvokedDispatcher.registerOnBackInvokedCallback(
-                OnBackInvokedDispatcher.PRIORITY_DEFAULT
+                OnBackInvokedDispatcher.PRIORITY_OVERLAY // En üst öncelik!
             ) {
-                // Sadece kendi fonksiyonumuzu çalıştırıyoruz
                 performBackAction()
             }
         }
 
-        // Genel geri tuşu kontrolü
+        // 2. ESKİ CİHAZLAR VE STANDART SİSTEM İÇİN
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 performBackAction()
             }
         })
+
+        // 3. WEBVIEW ODAKLI TUŞ YAKALAMA (En Garantili Yol)
+        webView.setOnKeyListener { _, keyCode, event ->
+            if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP) {
+                performBackAction()
+                true // Tuşu biz işledik, sisteme gönderme
+            } else {
+                false
+            }
+        }
     }
 
     private fun performBackAction() {
-        // JS tarafında buton kontrolü ve tıklama. 
-        // Log ekliyoruz ki Android Logcat'ten görebilelim.
         val jsCode = """
             (function() {
                 var btn = document.getElementById('btnBackToMain');
-                console.log('Android Back Pressed. Button exists: ' + (btn != null));
                 if (btn && window.getComputedStyle(btn).display !== 'none') {
                     btn.click();
                     return "JS_CLICKED";
@@ -123,30 +129,25 @@ class MainActivity : AppCompatActivity() {
         """.trimIndent()
 
         webView.evaluateJavascript(jsCode) { result ->
-            // result: ""JS_CLICKED"" veya ""JS_NONE""
             if (result != null && result.contains("JS_CLICKED")) {
-                // Başarıyla JS butonuna tıklandı, Android hiçbir şey yapmasın
+                // Başarıyla JS tıklandı
             } else {
-                // JS butonu yoksa veya gizliyse standart geri gitme
                 if (webView.canGoBack()) {
                     webView.goBack()
                 } else {
-                    // Uygulamanın kapanmasını istemiyorsanız burayı boş bırakabiliriz
-                    // Veya kullanıcıya "Çıkmak için tekrar basın" diyebiliriz.
-                    showToast("Ana sayfadasınız")
+                    // Uygulama kapanmaz, sadece uyarı verir
+                    showToast("Çıkış engellendi - Ana sayfadasınız")
                 }
             }
         }
     }
 
-    // Gerçek cihazlarda (Xiaomi, Samsung vb.) en alt seviye sinyal yakalama
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.keyCode == KeyEvent.KEYCODE_BACK) {
             if (event.action == KeyEvent.ACTION_UP) {
-                // Sadece tuş bırakıldığında bir kez çalışsın
                 performBackAction()
             }
-            return true // Sinyali Android sistemine GÖNDERME. Bu sayede uygulama KAPANMAZ.
+            return true // Sinyali SİSTEME VERME (Uygulama ASLA KAPANMAZ)
         }
         return super.dispatchKeyEvent(event)
     }
