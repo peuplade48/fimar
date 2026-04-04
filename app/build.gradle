@@ -19,12 +19,19 @@ android {
     }
 
     // GitHub Actions'da dosya hatası almamak için imza yapılandırmasını dinamik yapıyoruz
+    // Load signing properties if they exist
+    def keystorePropertiesFile = rootProject.file('keystore.properties')
+    def keystoreProperties = new Properties()
+    if (keystorePropertiesFile.exists()) {
+        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    }
+
     signingConfigs {
         release {
-            storeFile file("release-key.jks")
-            storePassword "apartman123"
-            keyAlias "apartman-alias"
-            keyPassword "apartman123"
+            storeFile file(project.findProperty("KEYSTORE_FILE") ?: keystoreProperties['storeFile'] ?: "release-key.jks")
+            storePassword project.findProperty("KEYSTORE_PASS") ?: keystoreProperties['storePassword'] ?: "apartman123"
+            keyAlias project.findProperty("KEY_ALIAS") ?: keystoreProperties['keyAlias'] ?: "apartman-alias"
+            keyPassword project.findProperty("KEY_PASS") ?: keystoreProperties['keyPassword'] ?: "apartman123"
             v1SigningEnabled true
             v2SigningEnabled true
         }
@@ -35,8 +42,6 @@ android {
             applicationIdSuffix ".debug"
             versionNameSuffix "-debug"
             debuggable true
-            // Debug modunda da gerçek imzayı kullan
-            signingConfig signingConfigs.release
             
             buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
         }
