@@ -43,7 +43,7 @@ android {
             versionNameSuffix "-debug"
             debuggable true
             
-            buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
+            buildConfigField "String", "SERVER_URL", '"http://falzer4.peuplade.com.tr"'
         }
         release {
             minifyEnabled false

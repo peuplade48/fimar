@@ -25,7 +25,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetCredentialResponse
@@ -61,12 +63,14 @@ class MainActivity : AppCompatActivity() {
         else showToast("Bluetooth izni reddedildi")
     }
 
-    // ─── onCreate ────────────────────────────────────────────────────────
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // Tam Ekran (Immersive Mode) Ayarları - Navigasyon Tuşlarını Gizle
+        hideSystemUI()
 
         val mainView = findViewById<View>(R.id.main)
         ViewCompat.setOnApplyWindowInsetsListener(mainView) { v, insets ->
@@ -89,73 +93,70 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         webView.loadUrl(SERVER_URL)
 
-        // 1. Android 13+ JESTLERİ İÇİN (Xiaomi vb.) - EN YÜKSEK ÖNCELİK
+        // Android 13+ JESTLERİ İÇİN (Xiaomi vb.)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             onBackInvokedDispatcher.registerOnBackInvokedCallback(
-                OnBackInvokedDispatcher.PRIORITY_OVERLAY // En üst öncelik!
+                OnBackInvokedDispatcher.PRIORITY_OVERLAY
             ) {
                 performBackAction()
             }
         }
+    }
 
-        // 2. ESKİ CİHAZLAR VE STANDART SİSTEM İÇİN
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                performBackAction()
-            }
-        })
+    private fun hideSystemUI() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        
+        // Hem durum çubuğunu hem navigasyon çubuğunu gizle
+        controller.hide(WindowInsetsCompat.Type.systemBars())
+        
+        // Kullanıcı ekranın kenarından kaydırdığında çubukların geçici olarak görünmesini sağla
+        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+    }
 
-        // 3. WEBVIEW ODAKLI TUŞ YAKALAMA (En Garantili Yol)
-        webView.setOnKeyListener { _, keyCode, event ->
-            if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP) {
-                performBackAction()
-                true // Tuşu biz işledik, sisteme gönderme
-            } else {
-                false
-            }
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            hideSystemUI()
         }
     }
 
     private fun performBackAction() {
-        val jsCode = """
-            (function() {
-                var btn = document.getElementById('btnBackToMain');
-                if (btn && window.getComputedStyle(btn).display !== 'none') {
-                    btn.click();
-                    return "JS_CLICKED";
-                }
-                return "JS_NONE";
-            })();
-        """.trimIndent()
-
-        webView.evaluateJavascript(jsCode) { result ->
-            if (result != null && result.contains("JS_CLICKED")) {
-                // Başarıyla JS tıklandı
-            } else {
-                if (webView.canGoBack()) {
-                    webView.goBack()
-                } else {
-                    // Uygulama kapanmaz, sadece uyarı verir
-                    showToast("Çıkış engellendi - Ana sayfadasınız")
+        // WebView içinde JS çalıştır
+        webView.evaluateJavascript(
+            "(function() { " +
+            "  var btn = document.getElementById('btnBackToMain'); " +
+            "  if (btn && window.getComputedStyle(btn).display !== 'none') { " +
+            "    btn.click(); return 'OK'; " +
+            "  } " +
+            "  return 'FAIL'; " +
+            "})()", 
+            { result ->
+                if (result == null || !result.contains("OK")) {
+                    if (webView.canGoBack()) {
+                        webView.goBack()
+                    } else {
+                        showToast("Çıkış Kilitlendi - Ana Sayfadasınız")
+                    }
                 }
             }
-        }
+        )
     }
 
+    // BU KISIM ÇOK KRİTİK: Geri tuşu sinyalini Android'e ASLA ulaştırmıyoruz.
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.keyCode == KeyEvent.KEYCODE_BACK) {
             if (event.action == KeyEvent.ACTION_UP) {
                 performBackAction()
             }
-            return true // Sinyali SİSTEME VERME (Uygulama ASLA KAPANMAZ)
+            return true // TRUE dönerek sinyali burada öldürüyoruz. super çağırmıyoruz!
         }
         return super.dispatchKeyEvent(event)
     }
 
-    // Eski API'ler için koruma
+    // Diğer tüm geri gitme metodlarını siliyoruz/boş bırakıyoruz ki karışıklık olmasın.
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        // Boş bırakıyoruz, çıkış engellendi.
         performBackAction()
     }
 
