@@ -99,39 +99,45 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun performBackAction() {
-        // Javascript tarafında buton kontrolü ve tıklama
+        // JS tarafında buton kontrolü ve tıklama. 
+        // Log ekliyoruz ki Android Logcat'ten görebilelim.
         val jsCode = """
             (function() {
                 var btn = document.getElementById('btnBackToMain');
+                console.log('Android Back Pressed. Button exists: ' + (btn != null));
                 if (btn && window.getComputedStyle(btn).display !== 'none') {
                     btn.click();
-                    return "JS_BACK";
+                    return "JS_CLICKED";
                 }
-                return "WEB_BACK";
+                return "JS_NONE";
             })();
         """.trimIndent()
 
         webView.evaluateJavascript(jsCode) { result ->
-            // result her zaman tırnak içinde gelir: ""JS_BACK"" veya ""WEB_BACK""
-            if (result == null || result == "null" || result.contains("WEB_BACK")) {
+            // result: ""JS_CLICKED"" veya ""JS_NONE""
+            if (result != null && result.contains("JS_CLICKED")) {
+                // Başarıyla JS butonuna tıklandı, Android hiçbir şey yapmasın
+            } else {
+                // JS butonu yoksa veya gizliyse standart geri gitme
                 if (webView.canGoBack()) {
                     webView.goBack()
                 } else {
-                    // Hiçbir şey yoksa bile JS geçmişinde geri git, ama asla uygulamadan çıkma
-                    webView.evaluateJavascript("window.history.back();", null)
+                    // Uygulamanın kapanmasını istemiyorsanız burayı boş bırakabiliriz
+                    // Veya kullanıcıya "Çıkmak için tekrar basın" diyebiliriz.
+                    showToast("Ana sayfadasınız")
                 }
             }
         }
     }
 
-    // Fiziksel tuşlar için en alt seviye koruma (Xiaomi vb. cihazlar için)
+    // Gerçek cihazlarda (Xiaomi, Samsung vb.) en alt seviye sinyal yakalama
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.keyCode == KeyEvent.KEYCODE_BACK) {
             if (event.action == KeyEvent.ACTION_UP) {
-                // Tuş bırakıldığında aksiyonu al
+                // Sadece tuş bırakıldığında bir kez çalışsın
                 performBackAction()
             }
-            return true // Sinyal burada ölür, Android sisteme gitmez.
+            return true // Sinyali Android sistemine GÖNDERME. Bu sayede uygulama KAPANMAZ.
         }
         return super.dispatchKeyEvent(event)
     }
