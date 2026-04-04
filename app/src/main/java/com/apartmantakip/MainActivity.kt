@@ -87,18 +87,6 @@ class MainActivity : AppCompatActivity() {
 
         setupWebView()
         webView.loadUrl(SERVER_URL)
-
-        // Geri tuşu kontrolü: Uygulamadan çıkışı engelle ve sadece WebView'da geri git
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (webView.canGoBack()) {
-                    webView.goBack()
-                } else {
-                    // WebView geçmişi yoksa bile JavaScript'e geri gitme komutu gönder
-                    webView.evaluateJavascript("window.history.back();", null)
-                }
-            }
-        })
     }
 
     // ─── WebView Kurulum ─────────────────────────────────────────────────
@@ -400,6 +388,20 @@ class MainActivity : AppCompatActivity() {
     // ─── Yardımcılar ──────────────────────────────────────────────────────
     fun showToast(msg: String) =
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+
+    // En sağlam geri tuşu yakalama yöntemi
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_DOWN) {
+            if (webView.canGoBack()) {
+                webView.goBack()
+            } else {
+                // WebView geçmişi yoksa JavaScript'e geri git komutu gönder
+                webView.evaluateJavascript("javascript:if(window.history.length > 1){window.history.back();}else{console.log('No history');}", null)
+            }
+            return true // Tuşu biz tükettik, uygulama kapanmaz
+        }
+        return super.dispatchKeyEvent(event)
+    }
 
     override fun onDestroy() {
         super.onDestroy()
