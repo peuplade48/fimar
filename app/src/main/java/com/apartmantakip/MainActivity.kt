@@ -65,33 +65,23 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        
+        // Pencereyi tam ekran yap ve navigasyon çubuğu alanını kullanma
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        
         setContentView(R.layout.activity_main)
 
-        // Tam Ekran (Immersive Mode) Ayarları - Navigasyon Tuşlarını Gizle
-        hideSystemUI()
-
-        val mainView = findViewById<View>(R.id.main)
-        ViewCompat.setOnApplyWindowInsetsListener(mainView) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
-            
-            v.setPadding(
-                systemBars.left, 
-                systemBars.top, 
-                systemBars.right, 
-                if (ime.bottom > 0) ime.bottom else systemBars.bottom
-            )
-            insets
-        }
-
+        // UI elementlerini bul
         webView    = findViewById(R.id.webView)
         progressBar = findViewById(R.id.progressBar)
         whatsAppHelper = WhatsAppHelper(this)
 
         setupWebView()
         webView.loadUrl(SERVER_URL)
+
+        // Navigasyon Tuşlarını Gizle
+        hideSystemUI()
 
         // Android 13+ JESTLERİ İÇİN (Xiaomi vb.)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -112,6 +102,11 @@ class MainActivity : AppCompatActivity() {
         
         // Kullanıcı ekranın kenarından kaydırdığında çubukların geçici olarak görünmesini sağla
         controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+    }
+
+    override fun onResume() {
+        super.onResume()
+        hideSystemUI()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
