@@ -12,6 +12,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.net.http.SslError
 import android.os.*
+import android.window.OnBackInvokedDispatcher
 import android.view.KeyEvent
 import android.view.View
 import android.webkit.*
@@ -88,31 +89,44 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         webView.loadUrl(SERVER_URL)
 
-        // Kesin çözüm: Uygulamadan çıkışı engelle ve JS geri butonunu tetikle
+        // Android 13+ (API 33) için Geri Tuşu Koruması
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT
+            ) {
+                // Geri tuşu basıldığında burası çalışacak
+                performBackAction()
+            }
+        }
+
+        // Eski sürümler ve modern Callback yapısı için
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                webView.evaluateJavascript(
-                    "(function() { " +
-                    "  var btn = document.getElementById('btnBackToMain'); " +
-                    "  if (btn && btn.style.display !== 'none') { " +
-                    "    btn.click(); " + // Sizin JS geri butonuna tıkla
-                    "    return true; " +
-                    "  } " +
-                    "  return false; " +
-                    "})()", 
-                    { result ->
-                        // Eğer ekranda JS butonu yoksa (result "false" döner), normal geri git
-                        if (result == "false") {
-                            if (webView.canGoBack()) {
-                                webView.goBack()
-                            } else {
-                                webView.evaluateJavascript("window.history.back();", null)
-                            }
-                        }
-                    }
-                )
+                performBackAction()
             }
         })
+    }
+
+    private fun performBackAction() {
+        webView.evaluateJavascript(
+            "(function() { " +
+            "  var btn = document.getElementById('btnBackToMain'); " +
+            "  if (btn && btn.style.display !== 'none') { " +
+            "    btn.click(); " +
+            "    return true; " +
+            "  } " +
+            "  return false; " +
+            "})()", 
+            { result ->
+                if (result == "false") {
+                    if (webView.canGoBack()) {
+                        webView.goBack()
+                    } else {
+                        webView.evaluateJavascript("window.history.back();", null)
+                    }
+                }
+            }
+        )
     }
 
     // ─── WebView Kurulum ─────────────────────────────────────────────────
