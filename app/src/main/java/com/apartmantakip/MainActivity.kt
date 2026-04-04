@@ -87,6 +87,32 @@ class MainActivity : AppCompatActivity() {
 
         setupWebView()
         webView.loadUrl(SERVER_URL)
+
+        // Kesin çözüm: Uygulamadan çıkışı engelle ve JS geri butonunu tetikle
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                webView.evaluateJavascript(
+                    "(function() { " +
+                    "  var btn = document.getElementById('btnBackToMain'); " +
+                    "  if (btn && btn.style.display !== 'none') { " +
+                    "    btn.click(); " + // Sizin JS geri butonuna tıkla
+                    "    return true; " +
+                    "  } " +
+                    "  return false; " +
+                    "})()", 
+                    { result ->
+                        // Eğer ekranda JS butonu yoksa (result "false" döner), normal geri git
+                        if (result == "false") {
+                            if (webView.canGoBack()) {
+                                webView.goBack()
+                            } else {
+                                webView.evaluateJavascript("window.history.back();", null)
+                            }
+                        }
+                    }
+                )
+            }
+        })
     }
 
     // ─── WebView Kurulum ─────────────────────────────────────────────────
@@ -388,20 +414,6 @@ class MainActivity : AppCompatActivity() {
     // ─── Yardımcılar ──────────────────────────────────────────────────────
     fun showToast(msg: String) =
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-
-    // En sağlam geri tuşu yakalama yöntemi
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_DOWN) {
-            if (webView.canGoBack()) {
-                webView.goBack()
-            } else {
-                // WebView geçmişi yoksa JavaScript'e geri git komutu gönder
-                webView.evaluateJavascript("javascript:if(window.history.length > 1){window.history.back();}else{console.log('No history');}", null)
-            }
-            return true // Tuşu biz tükettik, uygulama kapanmaz
-        }
-        return super.dispatchKeyEvent(event)
-    }
 
     override fun onDestroy() {
         super.onDestroy()
