@@ -12,6 +12,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.net.http.SslError
 import android.os.*
+import android.view.KeyEvent
 import android.view.View
 import android.webkit.*
 import android.widget.*
@@ -86,18 +87,6 @@ class MainActivity : AppCompatActivity() {
 
         setupWebView()
         webView.loadUrl(SERVER_URL)
-
-        // Geri tuşu kontrolü (WebView History için)
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (webView.canGoBack()) {
-                    webView.goBack()
-                } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
-                }
-            }
-        })
     }
 
     // ─── WebView Kurulum ─────────────────────────────────────────────────
@@ -399,6 +388,14 @@ class MainActivity : AppCompatActivity() {
     // ─── Yardımcılar ──────────────────────────────────────────────────────
     fun showToast(msg: String) =
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && webView.canGoBack()) {
+            webView.goBack()
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
 
     override fun onDestroy() {
         super.onDestroy()
