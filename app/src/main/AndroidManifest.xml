@@ -45,8 +45,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Fimar"
         android:usesCleartextTraffic="true"
-        android:enableOnBackInvokedCallback="false"
-        tools:targetApi="31">
+        android:enableOnBackInvokedCallback="true"
+        tools:targetApi="33">
 
         <activity
             android:name=".MainActivity"
