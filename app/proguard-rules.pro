@@ -1,30 +1,28 @@
-# FİMAR / Apartman Takip ProGuard Kuralları
+# Apartman Takip ProGuard Kuralları
 
-# WebView JavaScript arayüzü - Silinmesini engelle
+# WebView ve JavaScript Arayüzünü koru
+-keepattributes JavascriptInterface
+-keepattributes *Annotation*
+
+# JSBridge sınıfını ve metodlarını tamamen koru
 -keepclassmembers class com.apartmantakip.MainActivity$JSBridge {
     @android.webkit.JavascriptInterface <methods>;
 }
+-keep class com.apartmantakip.MainActivity$JSBridge { *; }
 
-# Paket ismini koru
+# WebView metodlarını koru
+-keepclassmembers class android.webkit.WebView {
+   public *;
+}
+
+# Tüm projeyi obfuscation'dan koru (Hata payını sıfıra indirmek için)
 -keep class com.apartmantakip.** { *; }
 
--keepattributes JavascriptInterface
--keepattributes *Annotation*
--keepattributes SourceFile,LineNumberTable
-
-# Kotlin Coroutines
+# Kotlin ve Coroutines
+-keep class kotlinx.coroutines.** { *; }
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
--keepclassmembernames class kotlinx.** { volatile <fields>; }
 
-# Helper sınıflarını koru
--keep class com.apartmantakip.BluetoothPrinterHelper { *; }
--keep class com.apartmantakip.WhatsAppHelper { *; }
-
-# AndroidX
--keep class androidx.** { *; }
--keep interface androidx.** { *; }
-
-# Google/JSON
+# Google ve JSON
 -keep class org.json.** { *; }
 -keep class com.google.** { *; }
