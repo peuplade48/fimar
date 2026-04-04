@@ -89,55 +89,57 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         webView.loadUrl(SERVER_URL)
 
-        // Callback ekleyelim ama tek başına yeterli olmayabilir
+        // GERİ TUŞUNU TAMAMEN ELE GEÇİR (Uygulamadan çıkışı %100 engeller)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
+                // Sadece kendi fonksiyonumuzu çalıştırıyoruz, çıkış komutu yok.
                 performBackAction()
             }
         })
     }
 
     private fun performBackAction() {
-        // Javascript içinde butonun görünürlüğünü getComputedStyle ile kontrol etmek daha sağlamdır
-        webView.evaluateJavascript(
-            "(function() { " +
-            "  var btn = document.getElementById('btnBackToMain'); " +
-            "  if (btn) { " +
-            "    var style = window.getComputedStyle(btn); " +
-            "    if (style.display !== 'none' && style.visibility !== 'hidden') { " +
-            "      btn.click(); " + 
-            "      return 'clicked'; " +
-            "    } " +
-            "  } " +
-            "  return 'not_clicked'; " +
-            "})()", 
-            { result ->
-                // evaluateJavascript sonucu JSON formatında gelir: "\"clicked\""
-                if (result == null || result == "null" || result.contains("not_clicked")) {
-                    if (webView.canGoBack()) {
-                        webView.goBack()
-                    } else {
-                        // Eğer hiçbir şey yapılamıyorsa bile JS geçmişinde zorla geri git
-                        webView.evaluateJavascript("window.history.back();", null)
-                    }
+        // Javascript tarafında buton kontrolü ve tıklama
+        val jsCode = """
+            (function() {
+                var btn = document.getElementById('btnBackToMain');
+                if (btn && window.getComputedStyle(btn).display !== 'none') {
+                    btn.click();
+                    return "JS_BACK";
+                }
+                return "WEB_BACK";
+            })();
+        """.trimIndent()
+
+        webView.evaluateJavascript(jsCode) { result ->
+            // result her zaman tırnak içinde gelir: ""JS_BACK"" veya ""WEB_BACK""
+            if (result == null || result == "null" || result.contains("WEB_BACK")) {
+                if (webView.canGoBack()) {
+                    webView.goBack()
+                } else {
+                    // Hiçbir şey yoksa bile JS geçmişinde geri git, ama asla uygulamadan çıkma
+                    webView.evaluateJavascript("window.history.back();", null)
                 }
             }
-        )
+        }
     }
 
-    // Gerçek cihazlarda ve Xiaomi'de tuş sinyalini en alt seviyede yakalayıp tüketelim
+    // Fiziksel tuşlar için en alt seviye koruma (Xiaomi vb. cihazlar için)
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_DOWN) {
-            performBackAction()
-            return true // Sinyali tükettik, Android'e iletmedik. Uygulama KAPANMAZ.
+        if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+            if (event.action == KeyEvent.ACTION_UP) {
+                // Tuş bırakıldığında aksiyonu al
+                performBackAction()
+            }
+            return true // Sinyal burada ölür, Android sisteme gitmez.
         }
         return super.dispatchKeyEvent(event)
     }
 
-    // Bazı sürümlerde bu metodun override edilmesi de şarttır
+    // Eski API'ler için koruma
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        // super.onBackPressed() ÇAĞIRMIYORUZ - Çağırırsak uygulama kapanır.
+        // Boş bırakıyoruz, çıkış engellendi.
         performBackAction()
     }
 
