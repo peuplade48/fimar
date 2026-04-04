@@ -87,6 +87,18 @@ class MainActivity : AppCompatActivity() {
 
         setupWebView()
         webView.loadUrl(SERVER_URL)
+
+        // Geri tuşu kontrolü: Uygulamadan çıkışı engelle ve sadece WebView'da geri git
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (webView.canGoBack()) {
+                    webView.goBack()
+                } else {
+                    // WebView geçmişi yoksa bile JavaScript'e geri gitme komutu gönder
+                    webView.evaluateJavascript("window.history.back();", null)
+                }
+            }
+        })
     }
 
     // ─── WebView Kurulum ─────────────────────────────────────────────────
@@ -388,14 +400,6 @@ class MainActivity : AppCompatActivity() {
     // ─── Yardımcılar ──────────────────────────────────────────────────────
     fun showToast(msg: String) =
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BACK && webView.canGoBack()) {
-            webView.goBack()
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
-    }
 
     override fun onDestroy() {
         super.onDestroy()
