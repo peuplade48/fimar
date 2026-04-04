@@ -89,17 +89,7 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         webView.loadUrl(SERVER_URL)
 
-        // Android 13+ (API 33) için Geri Tuşu Koruması
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            onBackInvokedDispatcher.registerOnBackInvokedCallback(
-                OnBackInvokedDispatcher.PRIORITY_DEFAULT
-            ) {
-                // Geri tuşu basıldığında burası çalışacak
-                performBackAction()
-            }
-        }
-
-        // Eski sürümler ve modern Callback yapısı için
+        // Callback ekleyelim ama tek başına yeterli olmayabilir
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 performBackAction()
@@ -108,25 +98,47 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun performBackAction() {
+        // Javascript içinde butonun görünürlüğünü getComputedStyle ile kontrol etmek daha sağlamdır
         webView.evaluateJavascript(
             "(function() { " +
             "  var btn = document.getElementById('btnBackToMain'); " +
-            "  if (btn && btn.style.display !== 'none') { " +
-            "    btn.click(); " +
-            "    return true; " +
+            "  if (btn) { " +
+            "    var style = window.getComputedStyle(btn); " +
+            "    if (style.display !== 'none' && style.visibility !== 'hidden') { " +
+            "      btn.click(); " + 
+            "      return 'clicked'; " +
+            "    } " +
             "  } " +
-            "  return false; " +
+            "  return 'not_clicked'; " +
             "})()", 
             { result ->
-                if (result == "false") {
+                // evaluateJavascript sonucu JSON formatında gelir: "\"clicked\""
+                if (result == null || result == "null" || result.contains("not_clicked")) {
                     if (webView.canGoBack()) {
                         webView.goBack()
                     } else {
+                        // Eğer hiçbir şey yapılamıyorsa bile JS geçmişinde zorla geri git
                         webView.evaluateJavascript("window.history.back();", null)
                     }
                 }
             }
         )
+    }
+
+    // Gerçek cihazlarda ve Xiaomi'de tuş sinyalini en alt seviyede yakalayıp tüketelim
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_DOWN) {
+            performBackAction()
+            return true // Sinyali tükettik, Android'e iletmedik. Uygulama KAPANMAZ.
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    // Bazı sürümlerde bu metodun override edilmesi de şarttır
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        // super.onBackPressed() ÇAĞIRMIYORUZ - Çağırırsak uygulama kapanır.
+        performBackAction()
     }
 
     // ─── WebView Kurulum ─────────────────────────────────────────────────
