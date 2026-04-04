@@ -89,10 +89,19 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         webView.loadUrl(SERVER_URL)
 
-        // GERİ TUŞUNU TAMAMEN ELE GEÇİR (Uygulamadan çıkışı %100 engeller)
+        // Android 13+ (API 33) ve üzeri için geri tuşu kaydı
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT
+            ) {
+                // Sadece kendi fonksiyonumuzu çalıştırıyoruz
+                performBackAction()
+            }
+        }
+
+        // Genel geri tuşu kontrolü
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // Sadece kendi fonksiyonumuzu çalıştırıyoruz, çıkış komutu yok.
                 performBackAction()
             }
         })
