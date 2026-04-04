@@ -15,6 +15,7 @@ import android.os.*
 import android.view.View
 import android.webkit.*
 import android.widget.*
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -85,6 +86,18 @@ class MainActivity : AppCompatActivity() {
 
         setupWebView()
         webView.loadUrl(SERVER_URL)
+
+        // Geri tuşu kontrolü (WebView History için)
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (webView.canGoBack()) {
+                    webView.goBack()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
     }
 
     // ─── WebView Kurulum ─────────────────────────────────────────────────
@@ -386,11 +399,6 @@ class MainActivity : AppCompatActivity() {
     // ─── Yardımcılar ──────────────────────────────────────────────────────
     fun showToast(msg: String) =
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-
-    override fun onBackPressed() {
-        if (webView.canGoBack()) webView.goBack()
-        else super.onBackPressed()
-    }
 
     override fun onDestroy() {
         super.onDestroy()
