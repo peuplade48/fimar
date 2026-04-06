@@ -11,8 +11,11 @@ android {
         applicationId "com.apartmantakip"
         minSdk 24
         targetSdk 35
-        versionCode 1
-        versionName "1.0.0"
+        
+        // GitHub Actions'dan gelen sürüm bilgilerini kullan
+        versionCode (project.findProperty("VERSION_CODE") ?: "1").toInteger()
+        versionName (project.findProperty("VERSION_NAME") ?: "1.0.0")
+
         multiDexEnabled true
 
         manifestPlaceholders = [appLabel: "Apartman Takip"]
