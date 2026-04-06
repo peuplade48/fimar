@@ -21,11 +21,9 @@ jobs:
       - name: 🔢 Sürüm Bilgilerini Ayarla (Otomatik Artış)
         run: |
           # 1.0.BUILD_NUMARASI şeklinde otomatik artan sürüm adı
-          # Build numarasını 230'lardan başlatmak yerine daha temiz bir sayı isterseniz offset ekleyebilirsiniz.
           VERSION_NAME="1.0.${{ github.run_number }}"
           VERSION_CODE=${{ github.run_number }}
           
-          # Eğer bir Tag (v1.2.3) basılırsa, sürüm ismini o Tag'den al
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             TAG_NAME="${{ github.ref_name }}"
             VERSION_NAME="${TAG_NAME#v}"
@@ -33,7 +31,6 @@ jobs:
           
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
           echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
-          echo "Final Version: $VERSION_NAME ($VERSION_CODE)"
 
       - name: ☕ JDK Kur
         uses: actions/setup-java@v4
@@ -41,14 +38,20 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: 🔑 Keystore Hazırla
+      - name: 🔑 Keystore Hazırla (Hata Giderici)
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/release-key.jks
+          mkdir -p app
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "Özel anahtar kullanılıyor..."
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/release-key.jks
+          else
+            echo "Anahtar bulunamadı, geçici anahtar oluşturuluyor..."
+            keytool -genkey -v -keystore app/release-key.jks -alias apartman-alias -keyalg RSA -keysize 2048 -validity 10000 -storepass apartman123 -keypass apartman123 -dname "CN=Apartman, OU=Takip, O=ApartmanTakip, L=Istanbul, S=Istanbul, C=TR"
+          fi
 
-      - name: 🛠️ Gradle Build (Hata Giderilmiş Versiyon)
+      - name: 🛠️ Gradle Build (Release)
         uses: gradle/gradle-build-action@v3
         with:
-          # ÖNEMLİ: Projedeki gradlew dosyasını değil, temiz Gradle 8.7 kullan
           gradle-version: 8.7
           arguments: |
             assembleRelease 
@@ -56,9 +59,9 @@ jobs:
             -PVERSION_NAME=${{ env.VERSION_NAME }}
             -PVERSION_CODE=${{ env.VERSION_CODE }}
             -PKEYSTORE_FILE=release-key.jks
-            -PKEYSTORE_PASS=${{ secrets.KEYSTORE_PASSWORD }}
-            -PKEY_ALIAS=${{ secrets.KEY_ALIAS }}
-            -PKEY_PASS=${{ secrets.KEY_PASSWORD }}
+            -PKEYSTORE_PASS=${{ secrets.KEYSTORE_PASSWORD || 'apartman123' }}
+            -PKEY_ALIAS=${{ secrets.KEY_ALIAS || 'apartman-alias' }}
+            -PKEY_PASS=${{ secrets.KEY_PASSWORD || 'apartman123' }}
 
       - name: 📤 APK Kaydet
         uses: actions/upload-artifact@v4

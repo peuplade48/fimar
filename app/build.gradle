@@ -35,10 +35,17 @@ android {
 
     signingConfigs {
         release {
-            storeFile file(project.findProperty("KEYSTORE_FILE") ?: keystoreProperties['storeFile'] ?: "release-key.jks")
-            storePassword project.findProperty("KEYSTORE_PASS") ?: keystoreProperties['storePassword'] ?: "apartman123"
-            keyAlias project.findProperty("KEY_ALIAS") ?: keystoreProperties['keyAlias'] ?: "apartman-alias"
-            keyPassword project.findProperty("KEY_PASS") ?: keystoreProperties['keyPassword'] ?: "apartman123"
+            // Parametre boşsa veya null ise varsayılan değerleri kullan
+            def getProp = { propName, defaultValue ->
+                def val = project.findProperty(propName)?.toString()?.replace("\"", "")?.replace("'", "")
+                return (val == null || val.isEmpty()) ? defaultValue : val
+            }
+
+            storeFile file(getProp("KEYSTORE_FILE", "release-key.jks"))
+            storePassword getProp("KEYSTORE_PASS", "apartman123")
+            keyAlias getProp("KEY_ALIAS", "apartman-alias")
+            keyPassword getProp("KEY_PASS", "apartman123")
+
             v1SigningEnabled true
             v2SigningEnabled true
         }
