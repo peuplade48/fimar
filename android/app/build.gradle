@@ -5,40 +5,28 @@ plugins {
 
 android {
     namespace 'com.fimar'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.fimar"
         minSdk 24
-        targetSdk 34
-        versionCode 1
-        versionName "1.0.0"
-        multiDexEnabled true
+        targetSdk 35
 
+        // DİKKAT: BURASI GITHUB ACTIONS TARAFINDAN ZORLA DEĞİŞTİRİLECEK
+        versionCode 99999
+        versionName "V_NAME_PLACEHOLDER"
+
+        multiDexEnabled true
         manifestPlaceholders = [appLabel: "FİMAR Su"]
     }
 
     buildTypes {
-        debug {
-            applicationIdSuffix ".debug"
-            versionNameSuffix "-debug"
-            debuggable true
-            
-            // GitHub Actions'da dosya hatası almamak için 
-            // ve telefonun kabul etmesi için imza zorunluluğunu esnetiyoruz
-            signingConfig signingConfigs.debug
-            
-            buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
-        }
         release {
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            
-            // Release build'i de test için debug imzasıyla paketliyoruz
-            signingConfig signingConfigs.debug
-            
-            buildConfigField "String", "SERVER_URL", '"http://192.168.1.100/fimar/index.php"'
+            signingConfig signingConfigs.debug 
+            buildConfigField "String", "SERVER_URL", '"https://falzer4.peuplade.com.tr"'
         }
     }
 
@@ -49,23 +37,11 @@ android {
 
     kotlinOptions {
         jvmTarget = '17'
-        freeCompilerArgs += ["-opt-in=kotlin.RequiresOptIn"]
     }
 
     buildFeatures {
         buildConfig = true
         viewBinding = true
-    }
-
-    packaging {
-        resources {
-            excludes += ['/META-INF/{AL2.0,LGPL2.1}', 'META-INF/DEPENDENCIES']
-        }
-    }
-
-    lint {
-        abortOnError false
-        checkReleaseBuilds false
     }
 }
 
@@ -76,7 +52,5 @@ dependencies {
     implementation 'androidx.webkit:webkit:1.11.0'
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0'
-    implementation 'org.json:json:20240303' 
     implementation 'androidx.multidex:multidex:2.0.1'
 }
