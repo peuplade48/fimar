@@ -48,38 +48,41 @@ jobs:
           echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
           
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "github-actions[bot]".noreply.github.com
           git tag "$NEW_TAG"
           git push origin "$NEW_TAG"
 
       # ── 2. ADIM: PROJE HAZIRLA ─────────────────────────────────────
-      - name: 🛠️ Gradle Hazırla
+      - name: 🛠️ Dosyaları Hazırla
         run: |
           if [ -d "android" ]; then cp -r android/* .; rm -rf android; fi
           gradle wrapper --gradle-version 8.7
           chmod +x ./gradlew
 
-      # ── 3. ADIM: APK BUILD ──────────────────────────────────────────
+      # ── 3. ADIM: DOSYA İÇERİĞİNİ ZORLA DEĞİŞTİR (KRİTİK ADIM) ───────
+      - name: ✍️ build.gradle Dosyasını Güncelle
+        run: |
+          V_NAME="${{ steps.tagger.outputs.tag }}"
+          V_CODE="${{ github.run_number }}"
+          S_URL="${{ github.event.inputs.server_url || 'https://falzer4.peuplade.com.tr' }}"
+          
+          # build.gradle içindeki satırları doğrudan yeni değerlerle değiştiriyoruz
+          sed -i "s/versionCode [0-9]*/versionCode $V_CODE/g" app/build.gradle
+          sed -i "s/versionName \".*\"/versionName \"$V_NAME\"/g" app/build.gradle
+          sed -i "s|buildConfigField \"String\", \"SERVER_URL\", \".*\"|buildConfigField \"String\", \"SERVER_URL\", \"\\\"$S_URL\\\"\"|g" app/build.gradle
+          
+          echo "Güncellenmiş build.gradle içeriği (Kontrol için):"
+          cat app/build.gradle | grep -E "versionCode|versionName|SERVER_URL"
+
+      # ── 4. ADIM: APK BUILD ──────────────────────────────────────────
       - name: 🛠️ APK Build
         run: |
           TYPE="${{ github.event.inputs.build_type || 'debug' }}"
-          VER_NAME="${{ steps.tagger.outputs.tag }}"
-          VER_CODE="${{ github.run_number }}"
-          S_URL="${{ github.event.inputs.server_url || 'https://falzer4.peuplade.com.tr' }}"
-          
           VARIANT=$(echo "$TYPE" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
           
-          # CLEAN eklemek çok önemli, eski build çıktılarını siler
-          ./gradlew clean assemble$VARIANT --no-daemon \
-            -Pandroid.injected.versionName="$VER_NAME" \
-            -Pandroid.injected.versionCode="$VER_CODE" \
-            -Pcustom_server_url="$S_URL" \
-            -PKEYSTORE_FILE="release-key.jks" \
-            -PKEYSTORE_PASS="${{ secrets.KEYSTORE_PASSWORD }}" \
-            -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
-            -PKEY_PASS="${{ secrets.KEY_PASSWORD }}"
+          ./gradlew clean assemble$VARIANT --no-daemon
 
-      # ── 4. ADIM: RELEASE ───────────────────────────────────────────
+      # ── 5. ADIM: RELEASE ───────────────────────────────────────────
       - name: 🚀 GitHub Release Oluştur
         uses: softprops/action-gh-release@v2
         with:
