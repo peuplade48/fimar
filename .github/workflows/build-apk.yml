@@ -11,6 +11,10 @@ on:
         default: 'debug'
         type: choice
         options: [debug, release]
+      server_url:
+        description: 'Sunucu URL Adresi'
+        required: true
+        default: 'https://falzer4.peuplade.com.tr'
 
 permissions:
   contents: write
@@ -33,7 +37,7 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # ── VERSİYON BELİRLE ────────────────────────────────────────────
+      # ── 1. ADIM: VERSİYON BELİRLE ────────────────────────────────────
       - name: 🏷️ Versiyonu Artır
         id: tagger
         run: |
@@ -48,15 +52,14 @@ jobs:
           git tag "$NEW_TAG"
           git push origin "$NEW_TAG"
 
-      # ── HAZIRLIK ───────────────────────────────────────────────────
+      # ── 2. ADIM: PROJE HAZIRLIĞI ─────────────────────────────────────
       - name: 🛠️ Proje Hazırla
         run: |
+          # Eğer dosyalar 'android' klasörü içindeyse dışarı çıkar
           if [ -d "android" ]; then cp -r android/* .; rm -rf android; fi
-          rm -rf gradle/ gradlew gradlew.bat
-          gradle wrapper --gradle-version 8.7
           chmod +x ./gradlew
 
-      # ── KEYSTORE (Sadece Release için) ─────────────────────────────
+      # ── 3. ADIM: KEYSTORE (Sadece Release için) ─────────────────────
       - name: 🔑 Release Keystore Hazırla
         env:
           MY_KEYSTORE_SECRET: ${{ secrets.KEYSTORE_BASE64 }}
@@ -65,9 +68,40 @@ jobs:
           mkdir -p app
           echo "$MY_KEYSTORE_SECRET" | base64 --decode > app/release-key.jks
 
-      # ── BUILD ──────────────────────────────────────────────────────
+      # ── 4. ADIM: BUILD ───────────────────────────────────────────────
       - name: 🛠️ APK Build
         run: |
           TYPE="${{ github.event.inputs.build_type || 'debug' }}"
           VER_NAME="${{ steps.tagger.outputs.tag }}"
           VER_CODE=${{ github.run_number }}
+          S_URL="${{ github.event.inputs.server_url || 'https://falzer4.peuplade.com.tr' }}"
+          
+          # İlk harfi büyüt (debug -> Debug)
+          BUILD_VARIANT=$(echo "$TYPE" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
+          
+          ./gradlew clean assemble$BUILD_VARIANT --no-daemon \
+            -Pandroid.injected.versionName="$VER_NAME" \
+            -Pandroid.injected.versionCode="$VER_CODE" \
+            -Pcustom_server_url="$S_URL" \
+            -PKEYSTORE_FILE="release-key.jks" \
+            -PKEYSTORE_PASS="${{ secrets.KEYSTORE_PASSWORD }}" \
+            -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
+            -PKEY_PASS="${{ secrets.KEY_PASSWORD }}"
+
+      # ── 5. ADIM: DOSYALARI DOĞRULA (Hata Ayıklama İçin) ──────────────
+      - name: 🔍 APK Kontrol
+        run: |
+          echo "Oluşan APK'lar listeleniyor:"
+          find app/build/outputs/apk/ -name "*.apk"
+
+      # ── 6. ADIM: GITHUB RELEASE (Kalıcı Yayınlama) ───────────────────
+      - name: 🚀 GitHub Release Oluştur
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "app/build/outputs/apk/**/*.apk"
+          name: "Apartman Takip v${{ steps.tagger.outputs.tag }}"
+          tag_name: ${{ steps.tagger.outputs.tag }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
