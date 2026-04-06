@@ -38,7 +38,7 @@ jobs:
           cache: gradle
 
       # ── 1. ADIM: VERSİYON BELİRLE ────────────────────────────────────
-      - name: 🏷️ Versiyonu Artır
+      - name: 🏷️ Versiyonu Hesapla
         id: tagger
         run: |
           LAST_TAG=$(git tag --list '[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1 || echo "1.0.0")
@@ -52,23 +52,24 @@ jobs:
           git tag "$NEW_TAG"
           git push origin "$NEW_TAG"
 
-      # ── 2. ADIM: PROJE HAZIRLA VE WRAPPER KURTAR ────────────────────
-      - name: 🛠️ Gradle Wrapper'ı Kurtar ve Hazırla
+      # ── 2. ADIM: PROJE HAZIRLA ─────────────────────────────────────
+      - name: 🛠️ Gradle Hazırla
         run: |
           if [ -d "android" ]; then cp -r android/* .; rm -rf android; fi
           gradle wrapper --gradle-version 8.7
           chmod +x ./gradlew
 
-      # ── 3. ADIM: BUILD (ZORLAMALI PARAMETRELER) ──────────────────────
+      # ── 3. ADIM: APK BUILD ──────────────────────────────────────────
       - name: 🛠️ APK Build
         run: |
           TYPE="${{ github.event.inputs.build_type || 'debug' }}"
           VER_NAME="${{ steps.tagger.outputs.tag }}"
-          VER_CODE=${{ github.run_number }}
+          VER_CODE="${{ github.run_number }}"
           S_URL="${{ github.event.inputs.server_url || 'https://falzer4.peuplade.com.tr' }}"
           
           VARIANT=$(echo "$TYPE" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
           
+          # CLEAN eklemek çok önemli, eski build çıktılarını siler
           ./gradlew clean assemble$VARIANT --no-daemon \
             -Pandroid.injected.versionName="$VER_NAME" \
             -Pandroid.injected.versionCode="$VER_CODE" \
@@ -78,7 +79,7 @@ jobs:
             -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
             -PKEY_PASS="${{ secrets.KEY_PASSWORD }}"
 
-      # ── 4. ADIM: GITHUB RELEASE ─────────────────────────────────────
+      # ── 4. ADIM: RELEASE ───────────────────────────────────────────
       - name: 🚀 GitHub Release Oluştur
         uses: softprops/action-gh-release@v2
         with:
