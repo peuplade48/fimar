@@ -11,10 +11,10 @@ android {
         applicationId "com.apartmantakip"
         minSdk 24
         targetSdk 35
-        
-        // Bu iki satır GitHub Actions tarafından silinip yerine doğrusu yazılacak
-        versionCode 1
-        versionName "1.0.0"
+
+        // GitHub Actions'dan gelen değerleri kullan, yoksa varsayılanı kullan
+        versionCode (project.findProperty('VERSION_CODE') ?: "1").toInteger()
+        versionName (project.findProperty('VERSION_NAME') ?: "1.0.0")
 
         multiDexEnabled true
         manifestPlaceholders = [appLabel: "Apartman Takip"]
