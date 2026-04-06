@@ -67,14 +67,15 @@ jobs:
           S_URL="${{ github.event.inputs.server_url || 'https://falzer4.peuplade.com.tr' }}"
           TARGET="app/build.gradle"
           
-          # 'sed' komutlarını en güvenli haliyle (ayrı ayrı ve tırnaklı) çalıştırıyoruz
-          sed -i "s/versionCode [0-9]*/versionCode $V_CODE/g" "$TARGET"
-          sed -i "s/versionName \".*\"/versionName \"$V_NAME\"/g" "$TARGET"
+          # Sadece satırın başında veya boşluktan sonra gelen tam kelimeleri değiştirir
+          # Bu sayede 'def versionCode' gibi yerleri bozmaz, sadece 'versionCode 1' olan yeri değiştirir
+          sed -i "s/\bversionCode [0-9]*/versionCode $V_CODE/g" "$TARGET"
+          sed -i "s/\bversionName \".*\"/versionName \"$V_NAME\"/g" "$TARGET"
           
-          # URL güncelleme (Seperator olarak | kullanıldı)
+          # URL güncelleme
           sed -i "s|buildConfigField \"String\", \"SERVER_URL\", \".*\"|buildConfigField \"String\", \"SERVER_URL\", \"\\\"$S_URL\\\"\"|g" "$TARGET"
           
-          echo "Dosya başarıyla güncellendi. Kontrol:"
+          echo "Dosya güncellendi. Kontrol:"
           grep -E "versionCode|versionName|SERVER_URL" "$TARGET"
 
       # ── 4. ADIM: APK BUILD ──────────────────────────────────────────
