@@ -83,6 +83,9 @@ class MainActivity : AppCompatActivity() {
         // Navigasyon Tuşlarını Gizle
         hideSystemUI()
 
+        // Güncelleme Kontrolü Yap
+        checkUpdates()
+
         // Android 13+ JESTLERİ İÇİN (Xiaomi vb.)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             onBackInvokedDispatcher.registerOnBackInvokedCallback(
@@ -114,6 +117,56 @@ class MainActivity : AppCompatActivity() {
         if (hasFocus) {
             hideSystemUI()
         }
+    }
+
+    private fun checkUpdates() {
+        val githubUser = "falzer4" // Kendi GitHub kullanıcı adınız
+        val repoName   = "Apartman_Takip" // Kendi depo adınız
+        val apiUrl = "https://api.github.com/repos/$githubUser/$repoName/releases/latest"
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                val response = java.net.URL(apiUrl).readText()
+                val json = org.json.JSONObject(response)
+                val latestTag = json.getString("tag_name").replace("v", "")
+                val currentVer = packageManager.getPackageInfo(packageName, 0).versionName
+
+                if (isNewerVersion(currentVer, latestTag)) {
+                    val downloadUrl = json.getString("html_url")
+                    withContext(Dispatchers.Main) {
+                        showUpdateDialog(latestTag, downloadUrl)
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("UpdateCheck", "Güncelleme kontrolü başarısız: ${e.message}")
+            }
+        }
+    }
+
+    private fun isNewerVersion(current: String, latest: String): Boolean {
+        return try {
+            val currParts = current.split(".").map { it.toInt() }
+            val lateParts = latest.split(".").map { it.toInt() }
+            for (i in 0 until Math.min(currParts.size, lateParts.size)) {
+                if (lateParts[i] > currParts[i]) return true
+                if (lateParts[i] < currParts[i]) return false
+            }
+            lateParts.size > currParts.size
+        } catch (_: Exception) {
+            latest > current
+        }
+    }
+
+    private fun showUpdateDialog(newVersion: String, url: String) {
+        AlertDialog.Builder(this)
+            .setTitle("🚀 Yeni Sürüm Hazır!")
+            .setMessage("Apartman Takip v$newVersion sürümü yayınlandı. Uygulamanızı güncelleyerek yeni özellikleri kullanmaya başlayabilirsiniz.")
+            .setPositiveButton("Şimdi Güncelle") { _, _ ->
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            }
+            .setNegativeButton("Daha Sonra", null)
+            .setCancelable(false)
+            .show()
     }
 
     private fun performBackAction() {

@@ -57,7 +57,7 @@ android {
             versionNameSuffix "-debug"
             debuggable true
             
-            buildConfigField "String", "SERVER_URL", '"http://falzer4.peuplade.com.tr"'
+            buildConfigField "String", "SERVER_URL", '"https://apartmantakip.peuplade.com.tr"'
         }
         release {
             minifyEnabled false
@@ -66,7 +66,7 @@ android {
             
             signingConfig signingConfigs.release
             
-            buildConfigField "String", "SERVER_URL", '"https://damlatakip.peuplade.com.tr"'
+            buildConfigField "String", "SERVER_URL", '"https://apartmantakip.peuplade.com.tr"'
         }
     }
 
