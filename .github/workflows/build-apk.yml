@@ -16,6 +16,10 @@ on:
         required: false
         default: ''
 
+# 1. KRİTİK AYAR: Yazma izni (Tag oluşturabilmek için)
+permissions:
+  contents: write
+
 env:
   JAVA_VERSION: '17'
 
@@ -28,7 +32,7 @@ jobs:
       - name: 📥 Kodu İndir
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # ÖNEMLİ: Versiyonları görebilmesi için tüm geçmişi çeker
+          fetch-depth: 0 # 2. KRİTİK AYAR: Eski tagleri görebilmesi için şart
 
       - name: ☕ JDK Kur
         uses: actions/setup-java@v4
@@ -59,28 +63,30 @@ jobs:
           SERVER="${{ github.event.inputs.server_url }}"
           find . -name "MainActivity.kt" -exec sed -i "s|private val SERVER_URL = \".*\"|private val SERVER_URL = \"$SERVER\"|g" {} +
 
-      # ── YENİ ADIM: OTOMATİK VERSİYON ARTIRMA ────────────────────────
+      # ── 4. ADIM: OTOMATİK VERSİYON ARTIRMA ──────────────────────────
       - name: 🏷️ Yeni Versiyon Belirle ve Tag Oluştur
         id: auto_tag
         run: |
-          # En son tag'i bul (yoksa v1.0.0'dan başla)
+          # En son tag'i bul, yoksa v1.0.0'dan başlat
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
+          echo "Mevcut en son tag: $LATEST_TAG"
           
-          # Versiyonu parçala ve patch numarasını artır
-          BASE_VERSION=$(echo $LATEST_TAG | cut -d. -f1,2)
-          PATCH_VERSION=$(echo $LATEST_TAG | cut -d. -f3)
-          NEW_PATCH=$((PATCH_VERSION + 1))
-          NEW_TAG="$BASE_VERSION.$NEW_PATCH"
+          # v1.0.5 -> 1.0.6 yapma mantığı
+          BASE=$(echo $LATEST_TAG | cut -d. -f1,2)
+          PATCH=$(echo $LATEST_TAG | cut -d. -f3)
+          NEW_PATCH=$((PATCH + 1))
+          NEW_TAG="$BASE.$NEW_PATCH"
           
+          echo "Yeni oluşturulan tag: $NEW_TAG"
           echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
           
-          # Git'e yeni tag'i ekle ve gönder
+          # Git konfigürasyonu ve Push
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag $NEW_TAG
           git push origin $NEW_TAG
 
-      # ── 4. ADIM: KEYSTORE HAZIRLA ────────────────────────────────────
+      # ── 5. ADIM: KEYSTORE HAZIRLA ────────────────────────────────────
       - name: 🔑 Release Keystore Hazırla
         env:
           MY_KEYSTORE_SECRET: ${{ secrets.KEYSTORE_BASE64 }}
@@ -89,29 +95,35 @@ jobs:
           mkdir -p app
           echo "$MY_KEYSTORE_SECRET" | base64 --decode > app/release-key.jks
 
-      # ── 5. ADIM: BUILD ───────────────────────────────────────────────
+      # ── 6. ADIM: BUILD (Dinamik Versiyon Gömme) ──────────────────────
       - name: 🛠️ APK Build
         run: |
           BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
+          # v1.0.1 -> 1.0.1 (v harfini temizle)
+          CLEAN_VER=$(echo "${{ steps.auto_tag.outputs.new_tag }}" | sed 's/v//g')
+          
           if [ "$BUILD_TYPE" == "release" ]; then
             ./gradlew assembleRelease --no-daemon \
+              -Pandroid.injected.versionName="$CLEAN_VER" \
               -PKEYSTORE_FILE="release-key.jks" \
               -PKEYSTORE_PASS="${{ secrets.KEYSTORE_PASSWORD }}" \
               -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
               -PKEY_PASS="${{ secrets.KEY_PASSWORD }}" \
               -Porg.gradle.jvmargs="-Xmx3g"
           else
-            ./gradlew assembleDebug --no-daemon -Porg.gradle.jvmargs="-Xmx3g"
+            ./gradlew assembleDebug --no-daemon \
+              -Pandroid.injected.versionName="$CLEAN_VER" \
+              -Porg.gradle.jvmargs="-Xmx3g"
           fi
 
-      # ── 6. ADIM: ARTIFACTS (Geçici Kayıt) ─────────────────────────────
+      # ── 7. ADIM: ARTIFACTS ──────────────────────────────────────────
       - name: 📤 APK Geçici Kaydet
         uses: actions/upload-artifact@v4
         with:
-          name: apartman-takip-apk-${{ steps.auto_tag.outputs.new_tag }}
+          name: apartman-takip-${{ steps.auto_tag.outputs.new_tag }}
           path: "app/build/outputs/apk/**/*.apk"
 
-      # ── 7. ADIM: GITHUB RELEASE (Kalıcı Yayınlama) ───────────────────
+      # ── 8. ADIM: GITHUB RELEASE ─────────────────────────────────────
       - name: 🚀 GitHub Release Oluştur
         uses: softprops/action-gh-release@v2
         with:
