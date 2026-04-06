@@ -3,6 +3,10 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+// GitHub'dan gelen değerleri en başta yakalıyoruz
+def g_versionCode = project.hasProperty('android.injected.versionCode') ? project.property('android.injected.versionCode').toInteger() : 1
+def g_versionName = project.hasProperty('android.injected.versionName') ? project.property('android.injected.versionName') : "1.0.0"
+
 android {
     namespace 'com.apartmantakip'
     compileSdk 35
@@ -12,30 +16,19 @@ android {
         minSdk 24
         targetSdk 35
         
-        // --- DEĞİŞİKLİK BURADA BAŞLIYOR ---
-        // GitHub Actions'dan gelen versionCode'u al, yoksa 1 yap
-        versionCode project.hasProperty('android.injected.versionCode') ? 
-                    project.property('android.injected.versionCode').toInteger() : 1
-        
-        // GitHub Actions'dan gelen versionName'i al, yoksa "1.0.0" yap
-        versionName project.hasProperty('android.injected.versionName') ? 
-                    project.property('android.injected.versionName') : "1.0.0"
-        // --- DEĞİŞİKLİK BURADA BİTİYOR ---
+        // Değişkenleri buraya atıyoruz
+        versionCode g_versionCode
+        versionName g_versionName
 
         multiDexEnabled true
         manifestPlaceholders = [appLabel: "Apartman Takip"]
     }
 
-    // Keystore ayarları (Aynı kalabilir, zaten dinamik yapmışsın)
-    def keystorePropertiesFile = rootProject.file('keystore.properties')
-    def keystoreProperties = new Properties()
-    if (keystorePropertiesFile.exists()) {
-        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-    }
+    // URL Yapılandırması
+    def finalUrl = project.findProperty("custom_server_url") ?: "https://falzer4.peuplade.com.tr"
 
     signingConfigs {
         release {
-            // findProperty kullanarak GitHub'dan gelen parametreleri öncelikli yapıyoruz
             storeFile file(project.findProperty("KEYSTORE_FILE") ?: "release-key.jks")
             storePassword project.findProperty("KEYSTORE_PASS") ?: "apartman123"
             keyAlias project.findProperty("KEY_ALIAS") ?: "apartman-alias"
@@ -50,39 +43,23 @@ android {
             applicationIdSuffix ".debug"
             versionNameSuffix "-debug"
             debuggable true
-            buildConfigField "String", "SERVER_URL", '"http://falzer4.peuplade.com.tr"'
+            buildConfigField "String", "SERVER_URL", "\"${finalUrl}\""
         }
         release {
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
-            buildConfigField "String", "SERVER_URL", '"https://falzer4.peuplade.com.tr"'
+            buildConfigField "String", "SERVER_URL", "\"${finalUrl}\""
         }
     }
 
-    // ... (Diğer kısımlar: compileOptions, kotlinOptions, dependencies aynı kalsın)
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = '17'
-        freeCompilerArgs += ["-opt-in=kotlin.RequiresOptIn"]
-    }
-    buildFeatures {
-        buildConfig = true
-        viewBinding = true
-    }
-    packaging {
-        resources {
-            excludes += ['/META-INF/{AL2.0,LGPL2.1}', 'META-INF/DEPENDENCIES']
-        }
-    }
-    lint {
-        abortOnError false
-        checkReleaseBuilds false
-    }
+    kotlinOptions { jvmTarget = '17' }
+    buildFeatures { buildConfig = true; viewBinding = true }
 }
 
 dependencies {
@@ -92,8 +69,6 @@ dependencies {
     implementation 'androidx.webkit:webkit:1.11.0'
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0'
-    implementation 'org.json:json:20240303' 
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'androidx.credentials:credentials:1.5.0'
     implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
