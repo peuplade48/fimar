@@ -12,9 +12,9 @@ android {
         minSdk 24
         targetSdk 35
         
-        // BU SATIRLAR GITHUB TARAFINDAN OTOMATİK DEĞİŞTİRİLECEK
-        versionCode 1
-        versionName "1.0.0"
+        // DİKKAT: GitHub Actions buradaki etiketleri bulup değiştirecek.
+        versionCode __VCODE__
+        versionName "__VNAME__"
 
         multiDexEnabled true
         manifestPlaceholders = [appLabel: "Apartman Takip"]
