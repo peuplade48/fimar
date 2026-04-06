@@ -41,6 +41,7 @@ jobs:
       - name: 🏷️ Versiyonu Hesapla
         id: tagger
         run: |
+          # Mevcut tag'leri al veya 1.0.0'dan başla
           LAST_TAG=$(git tag --list '[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1 || echo "1.0.0")
           IFS='.' read -r MAJOR MINOR PATCH <<< "$LAST_TAG"
           NEW_PATCH=$((PATCH + 1))
@@ -56,36 +57,20 @@ jobs:
       - name: 🛠️ Dosyaları Hazırla
         run: |
           if [ -d "android" ]; then cp -r android/* .; rm -rf android; fi
-          gradle wrapper --gradle-version 8.7
           chmod +x ./gradlew
 
-      # ── 3. ADIM: GARANTİLİ DOSYA GÜNCELLEME (AWK İLE) ────────────────
-      - name: ✍️ build.gradle Dosyasını Yenile
-        run: |
-          V_NAME="${{ steps.tagger.outputs.tag }}"
-          V_CODE="${{ github.run_number }}"
-          
-          # AWK ile satır satır yeni dosya oluşturuyoruz (Hata ihtimali %0)
-          awk -v v_code="$V_CODE" -v v_name="$V_NAME" '{
-            if ($1 == "versionCode") { print "        versionCode " v_code }
-            else if ($1 == "versionName") { print "        versionName \"" v_name "\"" }
-            else { print $0 }
-          }' app/build.gradle > app/build.gradle.new
-          
-          mv app/build.gradle.new app/build.gradle
-          
-          echo "Güncellenmiş Dosya Özeti:"
-          grep -E "versionCode|versionName" app/build.gradle
-
-      # ── 4. ADIM: APK BUILD ──────────────────────────────────────────
+      # ── 3. ADIM: APK BUILD (PARAMETRELER İLE) ───────────────────────
       - name: 🛠️ APK Build
         run: |
           TYPE="${{ github.event.inputs.build_type || 'debug' }}"
           VARIANT=$(echo "$TYPE" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
           
-          ./gradlew clean assemble$VARIANT --no-daemon
+          # Değerleri doğrudan Gradle'ın anlayacağı mülkler (properties) olarak iletiyoruz
+          ./gradlew clean assemble$VARIANT --no-daemon \
+            -PVERSION_NAME="${{ steps.tagger.outputs.tag }}" \
+            -PVERSION_CODE="${{ github.run_number }}"
 
-      # ── 5. ADIM: RELEASE ───────────────────────────────────────────
+      # ── 4. ADIM: RELEASE ───────────────────────────────────────────
       - name: 🚀 GitHub Release Oluştur
         uses: softprops/action-gh-release@v2
         with:
