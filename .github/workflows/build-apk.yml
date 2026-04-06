@@ -4,13 +4,6 @@ on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
-    inputs:
-      build_type:
-        description: 'Build türü'
-        required: true
-        default: 'release'
-        type: choice
-        options: [debug, release]
 
 permissions:
   contents: write
@@ -23,8 +16,6 @@ jobs:
     steps:
       - name: 📥 Kodu İndir
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: ☕ JDK Kur
         uses: actions/setup-java@v4
@@ -33,27 +24,34 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: 🛠️ Dosyaları Hazırla
+      - name: 🛠️ Dosyaları Hazırla ve Sürümü Gömmek
         run: |
-          # ÖNEMLİ: Alt klasördeki projeyi ana dizine çıkarıyoruz
+          # 1. Klasör düzenini ayarla
           if [ -d "android" ]; then 
             cp -r android/* .
             rm -rf android
           fi
-          # Gradle Wrapper onarımı
+          
+          # 2. Sürüm numaralarını hesapla
+          V_CODE=${{ github.run_number }}
+          V_NAME="1.0.${{ github.run_number }}"
+          
+          # 3. build.gradle dosyasındaki SAHTE değerleri GERÇEK değerlerle değiştir (KESİN ÇÖZÜM)
+          # 'versionCode 12345' yazan yeri bulup 'versionCode X' yapar
+          sed -i "s/versionCode 12345/versionCode $V_CODE/g" app/build.gradle
+          # 'versionName "1.0.0"' yazan yeri bulup 'versionName "1.0.X"' yapar
+          sed -i "s/versionName \"1.0.0\"/versionName \"$V_NAME\"/g" app/build.gradle
+          
+          # Kontrol için dosyayı ekrana yazdır (Loglarda görebilirsin)
+          grep -E "versionCode|versionName" app/build.gradle
+          
           gradle wrapper --gradle-version 8.7
           chmod +x ./gradlew
 
       - name: 🛠️ APK Build
-        run: |
-          TYPE="${{ github.event.inputs.build_type || 'release' }}"
-          VARIANT=$(echo "$TYPE" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
-          
-          # V_CODE parametresini kesin olarak gönderiyoruz
-          ./gradlew clean assemble$VARIANT --no-daemon \
-            -PV_CODE="${{ github.run_number }}"
+        run: ./gradlew clean assembleRelease --no-daemon
 
-      - name: 🚀 GitHub Release Oluştur
+      - name: 🚀 GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: "app/build/outputs/apk/**/*.apk"
