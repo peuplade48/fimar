@@ -3,8 +3,6 @@ name: 🔨 Apartman Takip APK Build
 on:
   push:
     branches: [ main, master ]
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 jobs:
@@ -20,14 +18,13 @@ jobs:
 
       - name: 🔢 Sürüm Bilgilerini Ayarla (Otomatik Artış)
         run: |
+          # 1.0.BUILD_NUMARASI şeklinde otomatik artan sürüm adı
           VERSION_NAME="1.0.${{ github.run_number }}"
           VERSION_CODE=${{ github.run_number }}
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            TAG_NAME="${{ github.ref_name }}"
-            VERSION_NAME="${TAG_NAME#v}"
-          fi
+          
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
           echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
+          echo "RELEASE_TAG=v$VERSION_NAME" >> $GITHUB_ENV
 
       - name: ☕ JDK Kur
         uses: actions/setup-java@v4
@@ -37,15 +34,11 @@ jobs:
 
       - name: 🔑 Keystore Hazırla (Temiz Kurulum)
         run: |
-          # Eski veya bozuk dosyaları temizle
           rm -f app/release-key.jks
           mkdir -p app
-          
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "Özel anahtar yükleniyor..."
             echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/release-key.jks
           else
-            echo "Geçici anahtar oluşturuluyor..."
             keytool -genkey -v -keystore app/release-key.jks -alias apartman-alias -keyalg RSA -keysize 2048 -validity 10000 -storepass apartman123 -keypass apartman123 -dname "CN=Apartman, OU=Takip, O=ApartmanTakip, L=Istanbul, S=Istanbul, C=TR"
           fi
 
@@ -63,19 +56,25 @@ jobs:
             -PKEY_ALIAS=${{ secrets.KEY_ALIAS || 'apartman-alias' }}
             -PKEY_PASS=${{ secrets.KEY_PASSWORD || 'apartman123' }}
 
-      - name: 📤 APK Kaydet
+      - name: 📤 APK Kaydet (Artifacts)
         uses: actions/upload-artifact@v4
         with:
           name: apartman-takip-${{ env.VERSION_NAME }}
           path: "app/build/outputs/apk/release/*.apk"
 
-      - name: 🚀 GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: 🚀 GitHub Release Oluştur (Her Push'ta)
         uses: softprops/action-gh-release@v2
         with:
           files: app/build/outputs/apk/release/*.apk
           name: "Apartman Takip v${{ env.VERSION_NAME }}"
-          tag_name: ${{ github.ref }}
-          body: "Otomatik Yayın. Sürüm: ${{ env.VERSION_NAME }} (Build: ${{ env.VERSION_CODE }})"
+          tag_name: ${{ env.RELEASE_TAG }}
+          body: |
+            ## 📱 Apartman Takip Yeni Sürüm
+            - **Versiyon:** ${{ env.VERSION_NAME }}
+            - **Build Numarası:** ${{ env.VERSION_CODE }}
+            - **Tarih:** ${{ github.event.head_commit.timestamp }}
+            - **Son Değişiklik:** ${{ github.event.head_commit.message }}
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
