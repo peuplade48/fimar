@@ -59,20 +59,22 @@ jobs:
           gradle wrapper --gradle-version 8.7
           chmod +x ./gradlew
 
-      # ── 3. ADIM: DOSYA İÇERİĞİNİ ZORLA DEĞİŞTİR (KRİTİK ADIM) ───────
+    # ── 3. ADIM: DOSYA İÇERİĞİNİ GÜNCELLE ───────────────────────────
       - name: ✍️ build.gradle Dosyasını Güncelle
         run: |
           V_NAME="${{ steps.tagger.outputs.tag }}"
           V_CODE="${{ github.run_number }}"
           S_URL="${{ github.event.inputs.server_url || 'https://falzer4.peuplade.com.tr' }}"
           
-          # build.gradle içindeki satırları doğrudan yeni değerlerle değiştiriyoruz
-          sed -i "s/versionCode [0-9]*/versionCode $V_CODE/g" app/build.gradle
-          sed -i "s/versionName \".*\"/versionName \"$V_NAME\"/g" app/build.gradle
+          # 'versionCode 1' gibi tam eşleşmeleri bulup değiştirir
+          sed -i "s/versionCode [0-9]*/versionCode $V_CODE/" app/build.gradle
+          sed -i "s/versionName \".*\"/versionName \"$V_NAME\"/" app/build.gradle
+          
+          # SERVER_URL kısmını hem debug hem release için güncelle
           sed -i "s|buildConfigField \"String\", \"SERVER_URL\", \".*\"|buildConfigField \"String\", \"SERVER_URL\", \"\\\"$S_URL\\\"\"|g" app/build.gradle
           
-          echo "Güncellenmiş build.gradle içeriği (Kontrol için):"
-          cat app/build.gradle | grep -E "versionCode|versionName|SERVER_URL"
+          echo "Değişiklikler yapıldı. Dosya özeti:"
+          grep -E "versionCode|versionName|SERVER_URL" app/build.gradle
 
       # ── 4. ADIM: APK BUILD ──────────────────────────────────────────
       - name: 🛠️ APK Build
