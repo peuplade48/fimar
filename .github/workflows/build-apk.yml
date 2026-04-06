@@ -16,7 +16,6 @@ on:
         required: false
         default: ''
 
-# Gerekli yazma izinleri
 permissions:
   contents: write
 
@@ -32,7 +31,7 @@ jobs:
       - name: 📥 Kodu İndir
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Geçmişi görerek versiyon artırmak için şart
+          fetch-depth: 0 
 
       - name: ☕ JDK Kur
         uses: actions/setup-java@v4
@@ -41,21 +40,33 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # ── 1. ADIM: VERSİYON BELİRLE (Hata Korumalı) ────────────────────
+      # ── 1. ADIM: VERSİYON BELİRLE (Garantili Temizlik) ───────────────
       - name: 🏷️ Versiyonu Artır
         id: tagger
         run: |
-          # Sadece sayısal tagleri bul (Örn: 1.0.5), bozuk isimleri görmezden gel
-          LAST_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || echo "1.0.0")
+          # Sadece X.Y.Z formatındaki tagleri listele, harf veya bozuk karakterleri filtrele
+          # Eğer geçerli bir tag yoksa 1.0.0'dan başlat
+          LAST_TAG=$(git tag --list '[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)
           
-          # Versiyonu parçala ve son haneyi artır
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$LAST_TAG"
-          NEW_PATCH=$((PATCH + 1))
-          NEW_TAG="$MAJOR.$MINOR.$NEW_PATCH"
+          if [ -z "$LAST_TAG" ]; then
+            NEW_TAG="1.0.1"
+          else
+            # 1.0.5 -> 1.0.6 artırımı
+            MAJOR=$(echo $LAST_TAG | cut -d. -f1)
+            MINOR=$(echo $LAST_TAG | cut -d. -f2)
+            PATCH=$(echo $LAST_TAG | cut -d. -f3)
+            NEW_PATCH=$((PATCH + 1))
+            NEW_TAG="$MAJOR.$MINOR.$NEW_PATCH"
+          fi
           
+          # Hatalı oluşma ihtimaline karşı tekrar kontrol (Boşsa veya sadece nokta kaldıysa)
+          if [[ ! $NEW_TAG =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            NEW_TAG="1.0.1"
+          fi
+
           echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
           
-          # Git konfigürasyonu ve Push
+          # Git Push
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag "$NEW_TAG"
@@ -83,7 +94,7 @@ jobs:
           SERVER="${{ github.event.inputs.server_url }}"
           find . -name "MainActivity.kt" -exec sed -i "s|private val SERVER_URL = \".*\"|private val SERVER_URL = \"$SERVER\"|g" {} +
 
-      # ── 5. ADIM: KEYSTORE HAZIRLA (Sadece Release Seçilirse) ─────────
+      # ── 5. ADIM: KEYSTORE HAZIRLA ────────────────────────────────────
       - name: 🔑 Release Keystore Hazırla
         env:
           MY_KEYSTORE_SECRET: ${{ secrets.KEYSTORE_BASE64 }}
@@ -92,7 +103,7 @@ jobs:
           mkdir -p app
           echo "$MY_KEYSTORE_SECRET" | base64 --decode > app/release-key.jks
 
-      # ── 6. ADIM: BUILD (Dinamik Versiyon Gömme) ──────────────────────
+      # ── 6. ADIM: BUILD ───────────────────────────────────────────────
       - name: 🛠️ APK Build
         run: |
           TYPE="${{ github.event.inputs.build_type || 'debug' }}"
@@ -104,15 +115,12 @@ jobs:
               -PKEYSTORE_FILE="release-key.jks" \
               -PKEYSTORE_PASS="${{ secrets.KEYSTORE_PASSWORD }}" \
               -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
-              -PKEY_PASS="${{ secrets.KEY_PASSWORD }}" \
-              -Porg.gradle.jvmargs="-Xmx3g"
+              -PKEY_PASS="${{ secrets.KEY_PASSWORD }}"
           else
-            ./gradlew assembleDebug --no-daemon \
-              -Pandroid.injected.versionName="$VER" \
-              -Porg.gradle.jvmargs="-Xmx3g"
+            ./gradlew assembleDebug --no-daemon -Pandroid.injected.versionName="$VER"
           fi
 
-      # ── 7. ADIM: GITHUB RELEASE (Kalıcı Yayınlama) ───────────────────
+      # ── 7. ADIM: GITHUB RELEASE ─────────────────────────────────────
       - name: 🚀 GitHub Release Oluştur
         uses: softprops/action-gh-release@v2
         with:
