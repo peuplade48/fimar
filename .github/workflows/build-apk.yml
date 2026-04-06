@@ -8,7 +8,7 @@ on:
       build_type:
         description: 'Build türü'
         required: true
-        default: 'debug'
+        default: 'release'
         type: choice
         options: [debug, release]
 
@@ -33,43 +33,31 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # ── 1. ADIM: VERSİYON BELİRLE ────────────────────────────────────
-      - name: 🏷️ Versiyonu Belirle
-        id: versioning
-        run: |
-          V_CODE="${{ github.run_number }}"
-          V_NAME="1.0.$V_CODE"
-          echo "v_code=$V_CODE" >> $GITHUB_OUTPUT
-          echo "v_name=$V_NAME" >> $GITHUB_OUTPUT
-          
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "$V_NAME" || echo "Tag zaten var."
-          git push origin "$V_NAME" || echo "Push yapıldı."
-
-      # ── 2. ADIM: GRADLE HAZIRLIĞI ──────────────────────────────────
       - name: 🛠️ Dosyaları Hazırla
         run: |
-          if [ -d "android" ]; then cp -r android/* .; rm -rf android; fi
+          # ÖNEMLİ: Alt klasördeki projeyi ana dizine çıkarıyoruz
+          if [ -d "android" ]; then 
+            cp -r android/* .
+            rm -rf android
+          fi
+          # Gradle Wrapper onarımı
           gradle wrapper --gradle-version 8.7
           chmod +x ./gradlew
 
-      # ── 3. ADIM: APK BUILD (KESİN ÇÖZÜM) ───────────────────────────
       - name: 🛠️ APK Build
         run: |
-          TYPE="${{ github.event.inputs.build_type || 'debug' }}"
+          TYPE="${{ github.event.inputs.build_type || 'release' }}"
           VARIANT=$(echo "$TYPE" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
           
-          # Parametreyi -P ile doğrudan Gradle'ın kalbine gönderiyoruz
+          # V_CODE parametresini kesin olarak gönderiyoruz
           ./gradlew clean assemble$VARIANT --no-daemon \
-            -PV_CODE="${{ steps.versioning.outputs.v_code }}"
+            -PV_CODE="${{ github.run_number }}"
 
-      # ── 4. ADIM: RELEASE ───────────────────────────────────────────
       - name: 🚀 GitHub Release Oluştur
         uses: softprops/action-gh-release@v2
         with:
           files: "app/build/outputs/apk/**/*.apk"
-          name: "Apartman Takip v${{ steps.versioning.outputs.v_name }}"
-          tag_name: ${{ steps.versioning.outputs.v_name }}
+          name: "Apartman Takip v1.0.${{ github.run_number }}"
+          tag_name: "v1.0.${{ github.run_number }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
