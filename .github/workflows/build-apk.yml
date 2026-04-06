@@ -16,7 +16,6 @@ on:
         required: false
         default: ''
 
-# 1. KRİTİK AYAR: Yazma izni (Tag oluşturabilmek için)
 permissions:
   contents: write
 
@@ -32,7 +31,7 @@ jobs:
       - name: 📥 Kodu İndir
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 2. KRİTİK AYAR: Eski tagleri görebilmesi için şart
+          fetch-depth: 0 # Geçmiş tagleri görmek için gerekli
 
       - name: ☕ JDK Kur
         uses: actions/setup-java@v4
@@ -41,7 +40,31 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # ── 1. ADIM: PROJE YAPISINI KONTROL ET ───────────────────────────
+      # ── 1. ADIM: VERSİYON BELİRLE ────────────────────────────────────
+      - name: 🏷️ Versiyonu Artır
+        id: tagger
+        run: |
+          # En son tag'i al (v1.0.0 formatında varsayıyoruz), yoksa 1.0.0'dan başla
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
+          
+          # v1.0.0 -> 1.0.0 (v harfini temizle)
+          CLEAN_TAG=${LATEST_TAG#v}
+          
+          # Parçalara ayır ve patch numarasını artır
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CLEAN_TAG"
+          NEW_PATCH=$((PATCH + 1))
+          NEW_TAG="$MAJOR.$MINOR.$NEW_PATCH"
+          
+          echo "new_tag=v$NEW_TAG" >> $GITHUB_OUTPUT
+          echo "clean_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          
+          # GitHub'a yeni tag'i pushla
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "v$NEW_TAG"
+          git push origin "v$NEW_TAG"
+
+      # ── 2. ADIM: PROJE YAPISINI KONTROL ET ───────────────────────────
       - name: 🛠️ Klasör Kontrolü
         run: |
           if [ -d "android" ]; then
@@ -49,58 +72,38 @@ jobs:
             rm -rf android
           fi
 
-      # ── 2. ADIM: GRADLE HAZIRLA ──────────────────────────────────────
+      # ── 3. ADIM: GRADLE HAZIRLA ──────────────────────────────────────
       - name: 🛠️ Gradle Wrapper Hazırla
         run: |
           rm -rf gradle/ gradlew gradlew.bat
           gradle wrapper --gradle-version 8.7
           chmod +x ./gradlew
 
-      # ── 3. ADIM: URL GÜNCELLEME ──────────────────────────────────────
+      # ── 4. ADIM: URL GÜNCELLEME ──────────────────────────────────────
       - name: 🌐 Sunucu URL Güncelle
         if: github.event.inputs.server_url != ''
         run: |
           SERVER="${{ github.event.inputs.server_url }}"
           find . -name "MainActivity.kt" -exec sed -i "s|private val SERVER_URL = \".*\"|private val SERVER_URL = \"$SERVER\"|g" {} +
 
-     # ── 4. ADIM: OTOMATİK VERSİYON ARTIRMA (Daha Güvenli Hali) ────────
-      - name: 🏷️ Yeni Versiyon Belirle ve Tag Oluştur
-        id: auto_tag
-        run: |
-          # En son tag'i al, yoksa 1.0.0 (v olmadan)
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/v//g' || echo "1.0.0")
-          
-          # Versiyonu parçala
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$LATEST_TAG"
-          NEW_PATCH=$((PATCH + 1))
-          NEW_TAG="$MAJOR.$MINOR.$NEW_PATCH"
-          
-          echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
-          
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "v$NEW_TAG" # GitHub'da v1.0.1 görünsün
-          git push origin "v$NEW_TAG"
-          
       # ── 5. ADIM: KEYSTORE HAZIRLA ────────────────────────────────────
       - name: 🔑 Release Keystore Hazırla
         env:
           MY_KEYSTORE_SECRET: ${{ secrets.KEYSTORE_BASE64 }}
-        if: (github.event.inputs.build_type == 'release' || steps.auto_tag.outputs.new_tag != '') && env.MY_KEYSTORE_SECRET != ''
+        if: (github.event.inputs.build_type == 'release' || steps.tagger.outputs.new_tag != '') && env.MY_KEYSTORE_SECRET != ''
         run: |
           mkdir -p app
           echo "$MY_KEYSTORE_SECRET" | base64 --decode > app/release-key.jks
 
-      # ── 6. ADIM: BUILD (Dinamik Versiyon Gömme) ──────────────────────
+      # ── 6. ADIM: BUILD ───────────────────────────────────────────────
       - name: 🛠️ APK Build
         run: |
           BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
-          # 1.0.1 -> 1.0.1 (v harfini temizle)
-          CLEAN_VER=$(echo "${{ steps.auto_tag.outputs.new_tag }}" | sed 's/v//g')
+          VERSION="${{ steps.tagger.outputs.clean_tag }}"
           
           if [ "$BUILD_TYPE" == "release" ]; then
             ./gradlew assembleRelease --no-daemon \
-              -Pandroid.injected.versionName="$CLEAN_VER" \
+              -Pandroid.injected.versionName="$VERSION" \
               -PKEYSTORE_FILE="release-key.jks" \
               -PKEYSTORE_PASS="${{ secrets.KEYSTORE_PASSWORD }}" \
               -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
@@ -108,26 +111,26 @@ jobs:
               -Porg.gradle.jvmargs="-Xmx3g"
           else
             ./gradlew assembleDebug --no-daemon \
-              -Pandroid.injected.versionName="$CLEAN_VER" \
+              -Pandroid.injected.versionName="$VERSION" \
               -Porg.gradle.jvmargs="-Xmx3g"
           fi
 
-      # ── 7. ADIM: ARTIFACTS ──────────────────────────────────────────
+      # ── 7. ADIM: ARTIFACTS (Geçici Kayıt) ─────────────────────────────
       - name: 📤 APK Geçici Kaydet
         uses: actions/upload-artifact@v4
         with:
-          name: apartman-takip-${{ steps.auto_tag.outputs.new_tag }}
+          name: apartman-takip-${{ steps.tagger.outputs.new_tag }}
           path: "app/build/outputs/apk/**/*.apk"
 
-      # ── 8. ADIM: GITHUB RELEASE ─────────────────────────────────────
+      # ── 8. ADIM: GITHUB RELEASE (Kalıcı Yayınlama) ───────────────────
       - name: 🚀 GitHub Release Oluştur
         uses: softprops/action-gh-release@v2
         with:
           files: |
             app/build/outputs/apk/release/*.apk
             app/build/outputs/apk/debug/*.apk
-          name: "Apartman Takip Sürüm ${{ steps.auto_tag.outputs.new_tag }}"
-          tag_name: ${{ steps.auto_tag.outputs.new_tag }}
+          name: "Apartman Takip Sürüm ${{ steps.tagger.outputs.new_tag }}"
+          tag_name: ${{ steps.tagger.outputs.new_tag }}
           draft: false
           prerelease: false
         env:
