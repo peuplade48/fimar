@@ -12,7 +12,7 @@ android {
         minSdk 24
         targetSdk 35
         
-        // Bu değerler GitHub Actions tarafından 'sed' komutuyla değiştirilecek
+        // DİKKAT: Alttaki iki satıra dokunma, GitHub bunları değiştirecek
         versionCode 1
         versionName "1.0.0"
 
