@@ -120,8 +120,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkUpdates() {
-        val githubUser = "falzer4" 
-        val repoName   = "ApartmanTakip"
+        val githubUser = "peuplade48" 
+        val repoName   = "Apartman_Takip"
         val apiUrl = "https://api.github.com/repos/$githubUser/$repoName/releases/latest"
 
         android.util.Log.i("UpdateCheck", "Güncelleme kontrolü başlatılıyor: $apiUrl")
