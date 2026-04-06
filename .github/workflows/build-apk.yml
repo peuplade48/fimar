@@ -59,33 +59,20 @@ jobs:
           gradle wrapper --gradle-version 8.7
           chmod +x ./gradlew
 
-      # ── 3. ADIM: ETİKETLERİ GERÇEK DEĞERLERLE DEĞİŞTİR ──────────────
-      - name: ✍️ build.gradle Dosyasını Güncelle
-        run: |
-          V_NAME="${{ steps.tagger.outputs.tag }}"
-          V_CODE="${{ github.run_number }}"
-          S_URL="${{ github.event.inputs.server_url || 'https://falzer4.peuplade.com.tr' }}"
-          TARGET="app/build.gradle"
-          
-          # __VCODE__ ve __VNAME__ etiketlerini GitHub'daki gerçek değerlerle değiştiriyoruz
-          sed -i "s/__VCODE__/$V_CODE/g" "$TARGET"
-          sed -i "s/__VNAME__/$V_NAME/g" "$TARGET"
-          
-          # SERVER_URL güncelleme
-          sed -i "s|buildConfigField \"String\", \"SERVER_URL\", \".*\"|buildConfigField \"String\", \"SERVER_URL\", \"\\\"$S_URL\\\"\"|g" "$TARGET"
-          
-          echo "Dosya güncellendi. Kontrol:"
-          grep -E "versionCode|versionName|SERVER_URL" "$TARGET"
-
-      # ── 4. ADIM: APK BUILD ──────────────────────────────────────────
+      # ── 3. ADIM: APK BUILD (KOMUT SATIRI PARAMETRELERİ İLE) ──────────
       - name: 🛠️ APK Build
         run: |
           TYPE="${{ github.event.inputs.build_type || 'debug' }}"
           VARIANT=$(echo "$TYPE" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
           
-          ./gradlew clean assemble$VARIANT --no-daemon
+          # Parametreleri doğrudan Gradle komutuna ekliyoruz. 
+          # Bu yöntem build.gradle dosyasını BOZMAZ.
+          ./gradlew clean assemble$VARIANT --no-daemon \
+            -Pandroid.injected.versionName="${{ steps.tagger.outputs.tag }}" \
+            -Pandroid.injected.versionCode="${{ github.run_number }}" \
+            -Pcustom_server_url="${{ github.event.inputs.server_url || 'https://falzer4.peuplade.com.tr' }}"
 
-      # ── 5. ADIM: RELEASE ───────────────────────────────────────────
+      # ── 4. ADIM: RELEASE ───────────────────────────────────────────
       - name: 🚀 GitHub Release Oluştur
         uses: softprops/action-gh-release@v2
         with:
