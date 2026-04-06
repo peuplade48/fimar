@@ -53,12 +53,12 @@ jobs:
           arguments: |
             assembleRelease 
             --no-daemon
-            -PVERSION_NAME="${{ env.VERSION_NAME }}"
-            -PVERSION_CODE="${{ env.VERSION_CODE }}"
-            -PKEYSTORE_FILE="release-key.jks"
-            -PKEYSTORE_PASS="${{ secrets.KEYSTORE_PASSWORD }}"
-            -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}"
-            -PKEY_PASS="${{ secrets.KEY_PASSWORD }}"
+            -PVERSION_NAME=${{ env.VERSION_NAME }}
+            -PVERSION_CODE=${{ env.VERSION_CODE }}
+            -PKEYSTORE_FILE=release-key.jks
+            -PKEYSTORE_PASS=${{ secrets.KEYSTORE_PASSWORD }}
+            -PKEY_ALIAS=${{ secrets.KEY_ALIAS }}
+            -PKEY_PASS=${{ secrets.KEY_PASSWORD }}
 
       - name: 📤 APK Kaydet
         uses: actions/upload-artifact@v4

@@ -12,9 +12,10 @@ android {
         minSdk 24
         targetSdk 35
         
-        // GitHub Actions'dan gelen sürüm bilgilerini güvenli şekilde al
-        def verCode = project.hasProperty("VERSION_CODE") ? project.VERSION_CODE.toInteger() : 1
-        def verName = project.hasProperty("VERSION_NAME") ? project.VERSION_NAME : "1.0.0"
+        // GitHub Actions'dan gelen sürüm bilgilerini güvenli şekilde al (Tırnak işaretlerini temizle)
+        def rawVerCode = project.findProperty("VERSION_CODE")?.toString()?.replace("\"", "")?.replace("'", "") ?: "1"
+        def verCode = rawVerCode.toInteger()
+        def verName = project.findProperty("VERSION_NAME")?.toString()?.replace("\"", "")?.replace("'", "") ?: "1.0.0"
 
         versionCode verCode
         versionName verName
