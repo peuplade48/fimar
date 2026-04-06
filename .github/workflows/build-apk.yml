@@ -37,40 +37,32 @@ jobs:
       - name: 🏷️ Versiyonu Belirle
         id: versioning
         run: |
-          # Build numarasını kullanarak 1.0.X formatında versiyon oluşturur
-          V_NAME="1.0.${{ github.run_number }}"
           V_CODE="${{ github.run_number }}"
-          echo "v_name=$V_NAME" >> $GITHUB_OUTPUT
+          V_NAME="1.0.$V_CODE"
           echo "v_code=$V_CODE" >> $GITHUB_OUTPUT
+          echo "v_name=$V_NAME" >> $GITHUB_OUTPUT
           
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag "$V_NAME" || echo "Tag zaten var."
           git push origin "$V_NAME" || echo "Push yapıldı."
 
-      # ── 2. ADIM: GRADLE VE DOSYA HAZIRLIĞI ──────────────────────────
+      # ── 2. ADIM: GRADLE HAZIRLIĞI ──────────────────────────────────
       - name: 🛠️ Dosyaları Hazırla
         run: |
           if [ -d "android" ]; then cp -r android/* .; rm -rf android; fi
-          
-          # build.gradle dosyasındaki etiketleri GERÇEK değerlerle değiştiriyoruz
-          # Bu yöntem asla sekmez çünkü __VCODE__ ve __VNAME__ eşsizdir.
-          sed -i "s/__VCODE__/${{ steps.versioning.outputs.v_code }}/g" app/build.gradle
-          sed -i "s/__VNAME__/${{ steps.versioning.outputs.v_name }}/g" app/build.gradle
-          
-          # Gradle Wrapper'ı tamir et
           gradle wrapper --gradle-version 8.7
           chmod +x ./gradlew
-          
-          echo "Dosya Güncellendi. Kontrol:"
-          grep -E "versionCode|versionName" app/build.gradle
 
-      # ── 3. ADIM: APK BUILD ──────────────────────────────────────────
+      # ── 3. ADIM: APK BUILD (KESİN ÇÖZÜM) ───────────────────────────
       - name: 🛠️ APK Build
         run: |
           TYPE="${{ github.event.inputs.build_type || 'debug' }}"
           VARIANT=$(echo "$TYPE" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
-          ./gradlew clean assemble$VARIANT --no-daemon
+          
+          # Parametreyi -P ile doğrudan Gradle'ın kalbine gönderiyoruz
+          ./gradlew clean assemble$VARIANT --no-daemon \
+            -PV_CODE="${{ steps.versioning.outputs.v_code }}"
 
       # ── 4. ADIM: RELEASE ───────────────────────────────────────────
       - name: 🚀 GitHub Release Oluştur
