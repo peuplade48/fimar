@@ -37,7 +37,7 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # ── 1. ADIM: VERSİYON BELİRLE ────────────────────────────────────
+      # ── 1. ADIM: VERSİYON HESAPLA ────────────────────────────────────
       - name: 🏷️ Versiyonu Hesapla
         id: tagger
         run: |
@@ -65,7 +65,32 @@ jobs:
           V_NAME="${{ steps.tagger.outputs.tag }}"
           V_CODE="${{ github.run_number }}"
           S_URL="${{ github.event.inputs.server_url || 'https://falzer4.peuplade.com.tr' }}"
+          TARGET="app/build.gradle"
           
-          # build.gradle içindeki satırları 'sed' ile doğrudan metin olarak değiştiriyoruz
-          sed -i "s/versionCode [0-9]*/versionCode $V_CODE/g" app/build.gradle
-          sed -i
+          # 'sed' komutlarını en güvenli haliyle (ayrı ayrı ve tırnaklı) çalıştırıyoruz
+          sed -i "s/versionCode [0-9]*/versionCode $V_CODE/g" "$TARGET"
+          sed -i "s/versionName \".*\"/versionName \"$V_NAME\"/g" "$TARGET"
+          
+          # URL güncelleme (Seperator olarak | kullanıldı)
+          sed -i "s|buildConfigField \"String\", \"SERVER_URL\", \".*\"|buildConfigField \"String\", \"SERVER_URL\", \"\\\"$S_URL\\\"\"|g" "$TARGET"
+          
+          echo "Dosya başarıyla güncellendi. Kontrol:"
+          grep -E "versionCode|versionName|SERVER_URL" "$TARGET"
+
+      # ── 4. ADIM: APK BUILD ──────────────────────────────────────────
+      - name: 🛠️ APK Build
+        run: |
+          TYPE="${{ github.event.inputs.build_type || 'debug' }}"
+          VARIANT=$(echo "$TYPE" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
+          
+          ./gradlew clean assemble$VARIANT --no-daemon
+
+      # ── 5. ADIM: RELEASE ───────────────────────────────────────────
+      - name: 🚀 GitHub Release Oluştur
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "app/build/outputs/apk/**/*.apk"
+          name: "Apartman Takip v${{ steps.tagger.outputs.tag }}"
+          tag_name: ${{ steps.tagger.outputs.tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
