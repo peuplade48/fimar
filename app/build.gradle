@@ -12,7 +12,7 @@ android {
         minSdk 24
         targetSdk 35
         
-        // Bu iki satır GitHub Actions tarafından dışarıdan enjekte edilecek
+        // Bu iki satır GitHub Actions tarafından silinip yerine doğrusu yazılacak
         versionCode 1
         versionName "1.0.0"
 
