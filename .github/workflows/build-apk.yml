@@ -6,6 +6,13 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build türü seçin'
+        required: true
+        default: 'debug'
+        type: choice
+        options: [debug, release]
 
 env:
   JAVA_VERSION: '17'
@@ -22,48 +29,76 @@ jobs:
           fetch-depth: 0
 
       - name: 🔢 Sürüm Bilgilerini Ayarla
+        id: versioning
         run: |
+          # Varsayılan değerler
           VERSION_NAME="1.0.0"
           VERSION_CODE=${{ github.run_number }}
+          
+          # Eğer bir tag (v1.2.3) üzerinden tetiklendiyse sürümü ondan al
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            VERSION_NAME="${{ github.ref_name }}"
-            VERSION_NAME="${VERSION_NAME#v}"
+            TAG_NAME="${{ github.ref_name }}"
+            VERSION_NAME="${TAG_NAME#v}"
           fi
+          
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
           echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
+          echo "Final Version: $VERSION_NAME ($VERSION_CODE)"
 
       - name: ☕ JDK Kur
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: 'temurin'
+          cache: gradle
 
-      # 🛠️ HATAYI ÇÖZEN KISIM: Gradle'ı elle kuruyoruz
-      - name: 🛠️ Gradle Kur ve Build Et
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: assembleRelease --no-daemon -PVERSION_NAME="${{ env.VERSION_NAME }}" -PVERSION_CODE="${{ env.VERSION_CODE }}" -PKEYSTORE_FILE="release-key.jks" -PKEYSTORE_PASS="${{ secrets.KEYSTORE_PASSWORD }}" -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" -PKEY_PASS="${{ secrets.KEY_PASSWORD }}"
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          
-      - name: 🔑 Release Keystore (Gerekirse)
-        if: env.KEYSTORE_BASE64 != ''
+      - name: 🛠️ Gradle Wrapper Hazırla
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/release-key.jks
+          chmod +x ./gradlew
 
-      - name: 📤 APK Kaydet
+      - name: 🔑 Release Keystore Hazırla
+        env:
+          MY_KEYSTORE_SECRET: ${{ secrets.KEYSTORE_BASE64 }}
+        if: (github.event.inputs.build_type == 'release' || startsWith(github.ref, 'refs/tags/v')) && env.MY_KEYSTORE_SECRET != ''
+        run: |
+          echo "$MY_KEYSTORE_SECRET" | base64 --decode > app/release-key.jks
+
+      - name: 🛠️ APK Build
+        run: |
+          BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            BUILD_TYPE="release"
+          fi
+          
+          TASK="assembleDebug"
+          if [ "$BUILD_TYPE" == "release" ]; then
+            TASK="assembleRelease"
+          fi
+          
+          ./gradlew $TASK --no-daemon \
+            -PVERSION_NAME="${{ env.VERSION_NAME }}" \
+            -PVERSION_CODE="${{ env.VERSION_CODE }}" \
+            -PKEYSTORE_FILE="release-key.jks" \
+            -PKEYSTORE_PASS="${{ secrets.KEYSTORE_PASSWORD }}" \
+            -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
+            -PKEY_PASS="${{ secrets.KEY_PASSWORD }}" \
+            -Porg.gradle.jvmargs="-Xmx3g"
+
+      - name: 📤 APK Geçici Kaydet
         uses: actions/upload-artifact@v4
         with:
-          name: apartman-takip-${{ env.VERSION_NAME }}
-          path: "app/build/outputs/apk/release/*.apk"
+          name: apartman-takip-${{ env.VERSION_NAME }}-b${{ env.VERSION_CODE }}
+          path: "app/build/outputs/apk/**/*.apk"
 
-      - name: 🚀 GitHub Release
+      - name: 🚀 GitHub Release Oluştur
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: app/build/outputs/apk/release/*.apk
           name: "Apartman Takip v${{ env.VERSION_NAME }}"
           tag_name: ${{ github.ref }}
-          body: "Sürüm: ${{ env.VERSION_NAME }} (Build: ${{ env.VERSION_CODE }})"
+          body: "Otomatik oluşturulan sürüm. Build No: ${{ env.VERSION_CODE }}"
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
