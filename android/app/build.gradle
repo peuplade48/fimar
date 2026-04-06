@@ -3,7 +3,7 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
-// GitHub Actions parametrelerini yakala
+// GitHub Actions parametrelerini en güvenli şekilde yakalıyoruz
 def g_versionCode = project.hasProperty('android.injected.versionCode') ? project.property('android.injected.versionCode').toInteger() : 1
 def g_versionName = project.hasProperty('android.injected.versionName') ? project.property('android.injected.versionName') : "1.0.0"
 def finalUrl = project.findProperty("custom_server_url") ?: "http://192.168.1.100/fimar/index.php"
@@ -17,6 +17,7 @@ android {
         minSdk 24
         targetSdk 34
         
+        // GitHub'dan gelen değerler buraya enjekte ediliyor
         versionCode g_versionCode
         versionName g_versionName
         
@@ -36,7 +37,8 @@ android {
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.debug // Test için debug imzası devam ediyor
+            // Test kolaylığı için debug imzası kullanmaya devam ediyoruz
+            signingConfig signingConfigs.debug 
             buildConfigField "String", "SERVER_URL", "\"${finalUrl}\""
         }
     }
