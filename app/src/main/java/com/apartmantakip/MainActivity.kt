@@ -124,20 +124,24 @@ class MainActivity : AppCompatActivity() {
         val repoName   = "Apartman_Takip" 
         val apiUrl = "https://api.github.com/repos/$githubUser/$repoName/releases/latest"
 
+        android.util.Log.i("UpdateCheck", "Güncelleme kontrolü başlatılıyor: $apiUrl")
+
         scope.launch(Dispatchers.IO) {
             try {
                 val url = java.net.URL(apiUrl)
                 val connection = url.openConnection() as java.net.HttpURLConnection
-                connection.setRequestProperty("User-Agent", "ApartmanTakip-App") // GitHub API için zorunlu
-                connection.connectTimeout = 10000
-                connection.readTimeout = 10000
+                connection.setRequestProperty("User-Agent", "ApartmanTakip-App")
+                connection.connectTimeout = 15000
+                connection.readTimeout = 15000
 
-                if (connection.responseCode == 200) {
+                val responseCode = connection.responseCode
+                android.util.Log.i("UpdateCheck", "GitHub Yanıt Kodu: $responseCode")
+
+                if (responseCode == 200) {
                     val response = connection.inputStream.bufferedReader().use { it.readText() }
                     val json = org.json.JSONObject(response)
                     val latestTag = json.getString("tag_name").replace("v", "")
                     
-                    // Mevcut sürümü al
                     val pInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
                     } else {
@@ -146,19 +150,23 @@ class MainActivity : AppCompatActivity() {
                     }
                     val currentVer = pInfo.versionName ?: "1.0.0"
 
-                    android.util.Log.d("UpdateCheck", "Mevcut: $currentVer, En Yeni: $latestTag")
+                    android.util.Log.i("UpdateCheck", "Sürüm Karşılaştırma -> Mevcut: $currentVer | GitHub: $latestTag")
 
                     if (isNewerVersion(currentVer, latestTag)) {
                         val downloadUrl = json.getString("html_url")
+                        android.util.Log.i("UpdateCheck", "Yeni sürüm bulundu! Dialog gösteriliyor.")
                         withContext(Dispatchers.Main) {
                             showUpdateDialog(latestTag, downloadUrl)
                         }
+                    } else {
+                        android.util.Log.i("UpdateCheck", "Uygulama güncel.")
                     }
                 } else {
-                    android.util.Log.e("UpdateCheck", "GitHub API Hatası: ${connection.responseCode}")
+                    val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() }
+                    android.util.Log.e("UpdateCheck", "API Hatası ($responseCode): $errorBody")
                 }
             } catch (e: Exception) {
-                android.util.Log.e("UpdateCheck", "Güncelleme kontrolü başarısız: ${e.message}")
+                android.util.Log.e("UpdateCheck", "Kritik Hata: ${e.message}", e)
             }
         }
     }
