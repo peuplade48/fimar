@@ -48,7 +48,7 @@ jobs:
           echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
           
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]".noreply.github.com
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag "$NEW_TAG"
           git push origin "$NEW_TAG"
 
@@ -59,37 +59,13 @@ jobs:
           gradle wrapper --gradle-version 8.7
           chmod +x ./gradlew
 
-    # ── 3. ADIM: DOSYA İÇERİĞİNİ GÜNCELLE ───────────────────────────
+      # ── 3. ADIM: DOSYA İÇERİĞİNİ ZORLA GÜNCELLE ─────────────────────
       - name: ✍️ build.gradle Dosyasını Güncelle
         run: |
           V_NAME="${{ steps.tagger.outputs.tag }}"
           V_CODE="${{ github.run_number }}"
           S_URL="${{ github.event.inputs.server_url || 'https://falzer4.peuplade.com.tr' }}"
           
-          # 'versionCode 1' gibi tam eşleşmeleri bulup değiştirir
-          sed -i "s/versionCode [0-9]*/versionCode $V_CODE/" app/build.gradle
-          sed -i "s/versionName \".*\"/versionName \"$V_NAME\"/" app/build.gradle
-          
-          # SERVER_URL kısmını hem debug hem release için güncelle
-          sed -i "s|buildConfigField \"String\", \"SERVER_URL\", \".*\"|buildConfigField \"String\", \"SERVER_URL\", \"\\\"$S_URL\\\"\"|g" app/build.gradle
-          
-          echo "Değişiklikler yapıldı. Dosya özeti:"
-          grep -E "versionCode|versionName|SERVER_URL" app/build.gradle
-
-      # ── 4. ADIM: APK BUILD ──────────────────────────────────────────
-      - name: 🛠️ APK Build
-        run: |
-          TYPE="${{ github.event.inputs.build_type || 'debug' }}"
-          VARIANT=$(echo "$TYPE" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
-          
-          ./gradlew clean assemble$VARIANT --no-daemon
-
-      # ── 5. ADIM: RELEASE ───────────────────────────────────────────
-      - name: 🚀 GitHub Release Oluştur
-        uses: softprops/action-gh-release@v2
-        with:
-          files: "app/build/outputs/apk/**/*.apk"
-          name: "Apartman Takip v${{ steps.tagger.outputs.tag }}"
-          tag_name: ${{ steps.tagger.outputs.tag }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # build.gradle içindeki satırları 'sed' ile doğrudan metin olarak değiştiriyoruz
+          sed -i "s/versionCode [0-9]*/versionCode $V_CODE/g" app/build.gradle
+          sed -i
