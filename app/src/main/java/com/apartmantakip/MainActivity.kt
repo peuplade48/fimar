@@ -40,7 +40,7 @@ import java.net.URL
 class MainActivity : AppCompatActivity() {
 
     // ── Sunucu adresi ── Kendi IP adresinizle değiştirin ─────────────────
-    private val SERVER_URL = "https://falzer4.peuplade.com.tr"
+    private val SERVER_URL = "https://apartmantakip.peuplade.com.tr"
     // ─────────────────────────────────────────────────────────────────────
 
     private lateinit var webView: WebView
