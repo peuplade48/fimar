@@ -35,23 +35,25 @@ jobs:
       - name: 🏷️ Versiyonu Belirle
         id: versioning
         run: |
-          # Build numarasını kullanarak 1.0.X formatında versiyon oluşturur
-          # Örn: Build 205 ise Versiyon 1.0.205 olur. Bu hata yapmaz.
           VERSION_NAME="1.0.${{ github.run_number }}"
           echo "tag=$VERSION_NAME" >> $GITHUB_OUTPUT
           
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "$VERSION_NAME" || echo "Tag zaten var, atlanıyor."
-          git push origin "$VERSION_NAME" || echo "Push zaten yapılmış, atlanıyor."
+          git tag "$VERSION_NAME" || echo "Tag zaten var."
+          git push origin "$VERSION_NAME" || echo "Push zaten yapılmış."
 
-      # ── 2. ADIM: PROJE HAZIRLA ─────────────────────────────────────
-      - name: 🛠️ Dosyaları Hazırla
+      # ── 2. ADIM: PROJE VE GRADLE HAZIRLA ───────────────────────────
+      - name: 🛠️ Gradle Wrapper Onar
         run: |
+          # Eğer alt klasördeyse dosyaları ana dizine çıkar
           if [ -d "android" ]; then cp -r android/* .; rm -rf android; fi
+          
+          # Eksik Gradle dosyalarını sıfırdan oluştur (Hatanın kesin çözümü)
+          gradle wrapper --gradle-version 8.7
           chmod +x ./gradlew
 
-      # ── 3. ADIM: APK BUILD (KESİN YÖNTEM) ───────────────────────────
+      # ── 3. ADIM: APK BUILD ──────────────────────────────────────────
       - name: 🛠️ APK Build
         run: |
           TYPE="${{ github.event.inputs.build_type || 'debug' }}"
