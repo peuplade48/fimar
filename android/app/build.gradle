@@ -11,13 +11,19 @@ android {
         applicationId "com.fimar"
         minSdk 24
         targetSdk 35
-
-        // DİKKAT: BURASI GITHUB ACTIONS TARAFINDAN ZORLA DEĞİŞTİRİLECEK
-        versionCode 99999
-        versionName "V_NAME_PLACEHOLDER"
-
+        versionCode project.hasProperty('VERSION_CODE') ? VERSION_CODE.toInteger() : 1
+        versionName project.hasProperty('VERSION_NAME') ? VERSION_NAME : "1.0.0"
         multiDexEnabled true
         manifestPlaceholders = [appLabel: "FİMAR Su"]
+    }
+
+    signingConfigs {
+        release {
+            storeFile file(project.hasProperty('KEYSTORE_FILE') ? KEYSTORE_FILE : 'release-key.jks')
+            storePassword project.hasProperty('KEYSTORE_PASS') ? KEYSTORE_PASS : ''
+            keyAlias project.hasProperty('KEY_ALIAS') ? KEY_ALIAS : ''
+            keyPassword project.hasProperty('KEY_PASS') ? KEY_PASS : ''
+        }
     }
 
     buildTypes {
@@ -25,7 +31,7 @@ android {
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.debug 
+            signingConfig signingConfigs.release  // ✅ RELEASE keystore
             buildConfigField "String", "SERVER_URL", '"https://falzer4.peuplade.com.tr"'
         }
     }
@@ -34,11 +40,9 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-
     kotlinOptions {
         jvmTarget = '17'
     }
-
     buildFeatures {
         buildConfig = true
         viewBinding = true

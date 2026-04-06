@@ -1,5 +1,4 @@
 name: 🔨 Apartman Takip APK Build
-
 on:
   push:
     branches: [ main, master ]
@@ -9,19 +8,16 @@ jobs:
   build:
     name: 📦 APK Oluştur
     runs-on: ubuntu-latest
-
     steps:
       - name: 📥 Kodu İndir
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 🔢 Sürüm Bilgilerini Ayarla (Otomatik Artış)
+      - name: 🔢 Sürüm Bilgilerini Ayarla
         run: |
-          # 1.0.BUILD_NUMARASI şeklinde otomatik artan sürüm adı
           VERSION_NAME="1.0.${{ github.run_number }}"
           VERSION_CODE=${{ github.run_number }}
-          
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
           echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
           echo "RELEASE_TAG=v$VERSION_NAME" >> $GITHUB_ENV
@@ -32,37 +28,32 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: 🔑 Keystore Hazırla (Temiz Kurulum)
+      - name: 🔑 Keystore Hazırla
         run: |
-          rm -f app/release-key.jks
           mkdir -p app
-          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/release-key.jks
-          else
-            keytool -genkey -v -keystore app/release-key.jks -alias apartman-alias -keyalg RSA -keysize 2048 -validity 10000 -storepass apartman123 -keypass apartman123 -dname "CN=Apartman, OU=Takip, O=ApartmanTakip, L=Istanbul, S=Istanbul, C=TR"
-          fi
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/release-key.jks
 
       - name: 🛠️ Gradle Build (Release)
         uses: gradle/gradle-build-action@v3
         with:
           gradle-version: 8.7
           arguments: |
-            assembleRelease 
+            assembleRelease
             --no-daemon
             -PVERSION_NAME=${{ env.VERSION_NAME }}
             -PVERSION_CODE=${{ env.VERSION_CODE }}
             -PKEYSTORE_FILE=release-key.jks
-            -PKEYSTORE_PASS=${{ secrets.KEYSTORE_PASSWORD || 'apartman123' }}
-            -PKEY_ALIAS=${{ secrets.KEY_ALIAS || 'apartman-alias' }}
-            -PKEY_PASS=${{ secrets.KEY_PASSWORD || 'apartman123' }}
+            -PKEYSTORE_PASS=${{ secrets.KEY_STORE_PASSWORD }}
+            -PKEY_ALIAS=${{ secrets.KEY_ALIAS }}
+            -PKEY_PASS=${{ secrets.KEY_PASSWORD }}
 
-      - name: 📤 APK Kaydet (Artifacts)
+      - name: 📤 APK Kaydet
         uses: actions/upload-artifact@v4
         with:
           name: apartman-takip-${{ env.VERSION_NAME }}
           path: "app/build/outputs/apk/release/*.apk"
 
-      - name: 🚀 GitHub Release Oluştur (Her Push'ta)
+      - name: 🚀 GitHub Release Oluştur
         uses: softprops/action-gh-release@v2
         with:
           files: app/build/outputs/apk/release/*.apk
