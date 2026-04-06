@@ -11,10 +11,6 @@ on:
         default: 'debug'
         type: choice
         options: [debug, release]
-      server_url:
-        description: 'Sunucu URL Adresi'
-        required: true
-        default: 'https://falzer4.peuplade.com.tr'
 
 permissions:
   contents: write
@@ -27,8 +23,6 @@ jobs:
     steps:
       - name: 📥 Kodu İndir
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 
 
       - name: ☕ JDK Kur
         uses: actions/setup-java@v4
@@ -37,21 +31,19 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # ── 1. ADIM: VERSİYON HESAPLA ────────────────────────────────────
-      - name: 🏷️ Versiyonu Hesapla
-        id: tagger
+      # ── 1. ADIM: VERSİYON BELİRLE ────────────────────────────────────
+      - name: 🏷️ Versiyonu Belirle
+        id: versioning
         run: |
-          # Mevcut tag'leri al veya 1.0.0'dan başla
-          LAST_TAG=$(git tag --list '[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1 || echo "1.0.0")
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$LAST_TAG"
-          NEW_PATCH=$((PATCH + 1))
-          NEW_TAG="$MAJOR.$MINOR.$NEW_PATCH"
-          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          # Build numarasını kullanarak 1.0.X formatında versiyon oluşturur
+          # Örn: Build 205 ise Versiyon 1.0.205 olur. Bu hata yapmaz.
+          VERSION_NAME="1.0.${{ github.run_number }}"
+          echo "tag=$VERSION_NAME" >> $GITHUB_OUTPUT
           
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "$NEW_TAG"
-          git push origin "$NEW_TAG"
+          git tag "$VERSION_NAME" || echo "Tag zaten var, atlanıyor."
+          git push origin "$VERSION_NAME" || echo "Push zaten yapılmış, atlanıyor."
 
       # ── 2. ADIM: PROJE HAZIRLA ─────────────────────────────────────
       - name: 🛠️ Dosyaları Hazırla
@@ -59,15 +51,14 @@ jobs:
           if [ -d "android" ]; then cp -r android/* .; rm -rf android; fi
           chmod +x ./gradlew
 
-      # ── 3. ADIM: APK BUILD (PARAMETRELER İLE) ───────────────────────
+      # ── 3. ADIM: APK BUILD (KESİN YÖNTEM) ───────────────────────────
       - name: 🛠️ APK Build
         run: |
           TYPE="${{ github.event.inputs.build_type || 'debug' }}"
           VARIANT=$(echo "$TYPE" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
           
-          # Değerleri doğrudan Gradle'ın anlayacağı mülkler (properties) olarak iletiyoruz
           ./gradlew clean assemble$VARIANT --no-daemon \
-            -PVERSION_NAME="${{ steps.tagger.outputs.tag }}" \
+            -PVERSION_NAME="${{ steps.versioning.outputs.tag }}" \
             -PVERSION_CODE="${{ github.run_number }}"
 
       # ── 4. ADIM: RELEASE ───────────────────────────────────────────
@@ -75,7 +66,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: "app/build/outputs/apk/**/*.apk"
-          name: "Apartman Takip v${{ steps.tagger.outputs.tag }}"
-          tag_name: ${{ steps.tagger.outputs.tag }}
+          name: "Apartman Takip v${{ steps.versioning.outputs.tag }}"
+          tag_name: ${{ steps.versioning.outputs.tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
