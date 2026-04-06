@@ -153,8 +153,19 @@ class MainActivity : AppCompatActivity() {
                     android.util.Log.i("UpdateCheck", "Sürüm Karşılaştırma -> Mevcut: $currentVer | GitHub: $latestTag")
 
                     if (isNewerVersion(currentVer, latestTag)) {
-                        val downloadUrl = json.getString("html_url")
-                        android.util.Log.i("UpdateCheck", "Yeni sürüm bulundu! Dialog gösteriliyor.")
+                        val assets = json.getJSONArray("assets")
+                        var downloadUrl = ""
+                        for (i in 0 until assets.length()) {
+                            val asset = assets.getJSONObject(i)
+                            if (asset.getString("name").endsWith(".apk")) {
+                                downloadUrl = asset.getString("browser_download_url")
+                                break
+                            }
+                        }
+                        
+                        if (downloadUrl.isEmpty()) downloadUrl = json.getString("html_url")
+
+                        android.util.Log.i("UpdateCheck", "Yeni sürüm bulundu! URL: $downloadUrl")
                         withContext(Dispatchers.Main) {
                             showUpdateDialog(latestTag, downloadUrl)
                         }
@@ -195,13 +206,69 @@ class MainActivity : AppCompatActivity() {
     private fun showUpdateDialog(newVersion: String, url: String) {
         AlertDialog.Builder(this)
             .setTitle("🚀 Yeni Sürüm Hazır!")
-            .setMessage("Apartman Takip v$newVersion sürümü yayınlandı. Uygulamanızı güncelleyerek yeni özellikleri kullanmaya başlayabilirsiniz.")
-            .setPositiveButton("Şimdi Güncelle") { _, _ ->
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            .setMessage("Apartman Takip v$newVersion sürümü yayınlandı. Uygulamanız otomatik olarak indirilecek ve kurulacaktır.")
+            .setPositiveButton("Hemen Güncelle") { _, _ ->
+                if (url.endsWith(".apk")) {
+                    startApkDownload(url)
+                } else {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                }
             }
             .setNegativeButton("Daha Sonra", null)
             .setCancelable(false)
             .show()
+    }
+
+    private fun startApkDownload(url: String) {
+        val progressDialog = AlertDialog.Builder(this)
+            .setTitle("İndiriliyor...")
+            .setMessage("Lütfen bekleyin, yeni sürüm indiriliyor.")
+            .setCancelable(false)
+            .show()
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                val connection = URL(url).openConnection() as java.net.HttpURLConnection
+                connection.connect()
+                
+                val file = java.io.File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "update.apk")
+                if (file.exists()) file.delete()
+
+                connection.inputStream.use { input ->
+                    file.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    progressDialog.dismiss()
+                    installApk(file)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    progressDialog.dismiss()
+                    showToast("İndirme hatası: ${e.message}")
+                    // Hata olursa tarayıcıya yönlendir
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                }
+            }
+        }
+    }
+
+    private fun installApk(file: java.io.File) {
+        try {
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                this, "$packageName.provider", file
+            )
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            showToast("Kurulum hatası: ${e.message}")
+        }
     }
 
     private fun performBackAction() {
