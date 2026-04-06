@@ -16,6 +16,7 @@ on:
         required: false
         default: ''
 
+# Gerekli yazma izinleri
 permissions:
   contents: write
 
@@ -31,7 +32,7 @@ jobs:
       - name: 📥 Kodu İndir
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Geçmiş tagleri görmek için gerekli
+          fetch-depth: 0 # Geçmişi görerek versiyon artırmak için şart
 
       - name: ☕ JDK Kur
         uses: actions/setup-java@v4
@@ -40,31 +41,27 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # ── 1. ADIM: VERSİYON BELİRLE ────────────────────────────────────
+      # ── 1. ADIM: VERSİYON BELİRLE (Hata Korumalı) ────────────────────
       - name: 🏷️ Versiyonu Artır
         id: tagger
         run: |
-          # En son tag'i al (v1.0.0 formatında varsayıyoruz), yoksa 1.0.0'dan başla
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
+          # Sadece sayısal tagleri bul (Örn: 1.0.5), bozuk isimleri görmezden gel
+          LAST_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || echo "1.0.0")
           
-          # v1.0.0 -> 1.0.0 (v harfini temizle)
-          CLEAN_TAG=${LATEST_TAG#v}
-          
-          # Parçalara ayır ve patch numarasını artır
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$CLEAN_TAG"
+          # Versiyonu parçala ve son haneyi artır
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$LAST_TAG"
           NEW_PATCH=$((PATCH + 1))
           NEW_TAG="$MAJOR.$MINOR.$NEW_PATCH"
           
-          echo "new_tag=v$NEW_TAG" >> $GITHUB_OUTPUT
-          echo "clean_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
           
-          # GitHub'a yeni tag'i pushla
+          # Git konfigürasyonu ve Push
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "v$NEW_TAG"
-          git push origin "v$NEW_TAG"
+          git tag "$NEW_TAG"
+          git push origin "$NEW_TAG"
 
-      # ── 2. ADIM: PROJE YAPISINI KONTROL ET ───────────────────────────
+      # ── 2. ADIM: PROJE YAPISINI DÜZENLE ──────────────────────────────
       - name: 🛠️ Klasör Kontrolü
         run: |
           if [ -d "android" ]; then
@@ -86,24 +83,24 @@ jobs:
           SERVER="${{ github.event.inputs.server_url }}"
           find . -name "MainActivity.kt" -exec sed -i "s|private val SERVER_URL = \".*\"|private val SERVER_URL = \"$SERVER\"|g" {} +
 
-      # ── 5. ADIM: KEYSTORE HAZIRLA ────────────────────────────────────
+      # ── 5. ADIM: KEYSTORE HAZIRLA (Sadece Release Seçilirse) ─────────
       - name: 🔑 Release Keystore Hazırla
         env:
           MY_KEYSTORE_SECRET: ${{ secrets.KEYSTORE_BASE64 }}
-        if: (github.event.inputs.build_type == 'release' || steps.tagger.outputs.new_tag != '') && env.MY_KEYSTORE_SECRET != ''
+        if: github.event.inputs.build_type == 'release' && env.MY_KEYSTORE_SECRET != ''
         run: |
           mkdir -p app
           echo "$MY_KEYSTORE_SECRET" | base64 --decode > app/release-key.jks
 
-      # ── 6. ADIM: BUILD ───────────────────────────────────────────────
+      # ── 6. ADIM: BUILD (Dinamik Versiyon Gömme) ──────────────────────
       - name: 🛠️ APK Build
         run: |
-          BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
-          VERSION="${{ steps.tagger.outputs.clean_tag }}"
+          TYPE="${{ github.event.inputs.build_type || 'debug' }}"
+          VER="${{ steps.tagger.outputs.tag }}"
           
-          if [ "$BUILD_TYPE" == "release" ]; then
+          if [ "$TYPE" == "release" ]; then
             ./gradlew assembleRelease --no-daemon \
-              -Pandroid.injected.versionName="$VERSION" \
+              -Pandroid.injected.versionName="$VER" \
               -PKEYSTORE_FILE="release-key.jks" \
               -PKEYSTORE_PASS="${{ secrets.KEYSTORE_PASSWORD }}" \
               -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
@@ -111,26 +108,17 @@ jobs:
               -Porg.gradle.jvmargs="-Xmx3g"
           else
             ./gradlew assembleDebug --no-daemon \
-              -Pandroid.injected.versionName="$VERSION" \
+              -Pandroid.injected.versionName="$VER" \
               -Porg.gradle.jvmargs="-Xmx3g"
           fi
 
-      # ── 7. ADIM: ARTIFACTS (Geçici Kayıt) ─────────────────────────────
-      - name: 📤 APK Geçici Kaydet
-        uses: actions/upload-artifact@v4
-        with:
-          name: apartman-takip-${{ steps.tagger.outputs.new_tag }}
-          path: "app/build/outputs/apk/**/*.apk"
-
-      # ── 8. ADIM: GITHUB RELEASE (Kalıcı Yayınlama) ───────────────────
+      # ── 7. ADIM: GITHUB RELEASE (Kalıcı Yayınlama) ───────────────────
       - name: 🚀 GitHub Release Oluştur
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/apk/debug/*.apk
-          name: "Apartman Takip Sürüm ${{ steps.tagger.outputs.new_tag }}"
-          tag_name: ${{ steps.tagger.outputs.new_tag }}
+          files: "app/build/outputs/apk/**/*.apk"
+          name: "Apartman Takip Sürüm ${{ steps.tagger.outputs.tag }}"
+          tag_name: ${{ steps.tagger.outputs.tag }}
           draft: false
           prerelease: false
         env:
