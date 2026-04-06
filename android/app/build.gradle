@@ -3,21 +3,23 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
-// GitHub Actions parametrelerini en güvenli şekilde yakalıyoruz
-def g_versionCode = project.hasProperty('android.injected.versionCode') ? project.property('android.injected.versionCode').toInteger() : 1
-def g_versionName = project.hasProperty('android.injected.versionName') ? project.property('android.injected.versionName') : "1.0.0"
-def finalUrl = project.findProperty("custom_server_url") ?: "http://192.168.1.100/fimar/index.php"
+// ── SÜRÜM YAKALAMA MANTIĞI ──
+// GitHub Actions'dan gelen V_CODE ve V_NAME parametrelerini okur.
+// Eğer yoksa (yerel build) varsayılan 1 ve 1.0.0 kullanır.
+def g_versionCode = project.findProperty('V_CODE') ? project.property('V_CODE').toInteger() : 1
+def g_versionName = project.findProperty('V_NAME') ? project.property('V_NAME') : "1.0.0"
+def finalUrl = project.findProperty("custom_server_url") ?: "https://falzer4.peuplade.com.tr"
 
 android {
     namespace 'com.fimar'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.fimar"
         minSdk 24
-        targetSdk 34
+        targetSdk 35
         
-        // GitHub'dan gelen değerler buraya enjekte ediliyor
+        // Dinamik değerler buraya yazılıyor
         versionCode g_versionCode
         versionName g_versionName
         
@@ -30,7 +32,6 @@ android {
             applicationIdSuffix ".debug"
             versionNameSuffix "-debug"
             debuggable true
-            signingConfig signingConfigs.debug
             buildConfigField "String", "SERVER_URL", "\"${finalUrl}\""
         }
         release {
