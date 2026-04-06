@@ -8,19 +8,32 @@ jobs:
   build:
     name: 📦 APK Oluştur
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     steps:
       - name: 📥 Kodu İndir
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 🔢 Sürüm Bilgilerini Ayarla
+      - name: 🔢 Sürüm Bilgilerini Ayarla (OFFSET Uygulanmış)
         run: |
-          VERSION_NAME="1.0.${{ github.run_number }}"
-          VERSION_CODE=${{ github.run_number }}
+          # OFFSET: github.run_number 260 ise, 260 - 259 = 1 olur. Sürüm: 1.0.1
+          OFFSET=259
+          RUN_NUMBER=${{ github.run_number }}
+          VERSION_LAST=$((RUN_NUMBER - OFFSET))
+          
+          # Eğer numara 1'den küçükse 1 yap (Hata önleyici)
+          if [ $VERSION_LAST -lt 1 ]; then VERSION_LAST=1; fi
+          
+          VERSION_NAME="1.0.$VERSION_LAST"
+          VERSION_CODE=$RUN_NUMBER
+          
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
           echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
           echo "RELEASE_TAG=v$VERSION_NAME" >> $GITHUB_ENV
+          echo "🚀 Sürüm Hazırlanıyor: $VERSION_NAME ($VERSION_CODE)"
 
       - name: ☕ JDK Kur
         uses: actions/setup-java@v4
