@@ -3,10 +3,6 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
-// GitHub'dan gelen değerleri en başta yakalıyoruz
-def g_versionCode = project.hasProperty('android.injected.versionCode') ? project.property('android.injected.versionCode').toInteger() : 1
-def g_versionName = project.hasProperty('android.injected.versionName') ? project.property('android.injected.versionName') : "1.0.0"
-
 android {
     namespace 'com.apartmantakip'
     compileSdk 35
@@ -15,16 +11,29 @@ android {
         applicationId "com.apartmantakip"
         minSdk 24
         targetSdk 35
+
+        // --- KRİTİK GÜNCELLEME BAŞLANGICI ---
+        // Eğer GitHub'dan (android.injected...) değer gelmişse onu kullan, 
+        // gelmemişse (Lokal build) 1 ve "1.0.0" kullan.
         
-        // Değişkenleri buraya atıyoruz
-        versionCode g_versionCode
-        versionName g_versionName
+        if (project.hasProperty('android.injected.versionCode')) {
+            versionCode project.property('android.injected.versionCode').toInteger()
+        } else {
+            versionCode 1
+        }
+
+        if (project.hasProperty('android.injected.versionName')) {
+            versionName project.property('android.injected.versionName')
+        } else {
+            versionName "1.0.0"
+        }
+        // --- KRİTİK GÜNCELLEME BİTİŞİ ---
 
         multiDexEnabled true
         manifestPlaceholders = [appLabel: "Apartman Takip"]
     }
 
-    // URL Yapılandırması
+    // URL Yapılandırması (Giriş kutusundan gelen URL)
     def finalUrl = project.findProperty("custom_server_url") ?: "https://falzer4.peuplade.com.tr"
 
     signingConfigs {
@@ -69,6 +78,7 @@ dependencies {
     implementation 'androidx.webkit:webkit:1.11.0'
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0'
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'androidx.credentials:credentials:1.5.0'
     implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
