@@ -121,7 +121,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkUpdates() {
         val githubUser = "falzer4" 
-        val repoName   = "Apartman_Takip" 
+        val repoName   = "ApartmanTakip"
         val apiUrl = "https://api.github.com/repos/$githubUser/$repoName/releases/latest"
 
         android.util.Log.i("UpdateCheck", "Güncelleme kontrolü başlatılıyor: $apiUrl")
@@ -173,13 +173,20 @@ class MainActivity : AppCompatActivity() {
 
     private fun isNewerVersion(current: String, latest: String): Boolean {
         return try {
-            val currParts = current.split(".").map { it.toInt() }
-            val lateParts = latest.split(".").map { it.toInt() }
-            for (i in 0 until Math.min(currParts.size, lateParts.size)) {
-                if (lateParts[i] > currParts[i]) return true
-                if (lateParts[i] < currParts[i]) return false
+            // Sadece rakamları ve noktaları al (debug takılarını temizle)
+            val currClean = current.filter { it.isDigit() || it == '.' }
+            val lateClean = latest.filter { it.isDigit() || it == '.' }
+            
+            val currParts = currClean.split(".").filter { it.isNotEmpty() }.map { it.toInt() }
+            val lateParts = lateClean.split(".").filter { it.isNotEmpty() }.map { it.toInt() }
+            
+            for (i in 0 until Math.max(currParts.size, lateParts.size)) {
+                val c = if (i < currParts.size) currParts[i] else 0
+                val l = if (i < lateParts.size) lateParts[i] else 0
+                if (l > c) return true
+                if (l < c) return false
             }
-            lateParts.size > currParts.size
+            false
         } catch (_: Exception) {
             latest > current
         }
