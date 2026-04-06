@@ -59,7 +59,7 @@ jobs:
           gradle wrapper --gradle-version 8.7
           chmod +x ./gradlew
 
-      # ── 3. ADIM: DOSYA İÇERİĞİNİ ZORLA GÜNCELLE ─────────────────────
+      # ── 3. ADIM: ETİKETLERİ GERÇEK DEĞERLERLE DEĞİŞTİR ──────────────
       - name: ✍️ build.gradle Dosyasını Güncelle
         run: |
           V_NAME="${{ steps.tagger.outputs.tag }}"
@@ -67,12 +67,11 @@ jobs:
           S_URL="${{ github.event.inputs.server_url || 'https://falzer4.peuplade.com.tr' }}"
           TARGET="app/build.gradle"
           
-          # Sadece satırın başında veya boşluktan sonra gelen tam kelimeleri değiştirir
-          # Bu sayede 'def versionCode' gibi yerleri bozmaz, sadece 'versionCode 1' olan yeri değiştirir
-          sed -i "s/\bversionCode [0-9]*/versionCode $V_CODE/g" "$TARGET"
-          sed -i "s/\bversionName \".*\"/versionName \"$V_NAME\"/g" "$TARGET"
+          # __VCODE__ ve __VNAME__ etiketlerini GitHub'daki gerçek değerlerle değiştiriyoruz
+          sed -i "s/__VCODE__/$V_CODE/g" "$TARGET"
+          sed -i "s/__VNAME__/$V_NAME/g" "$TARGET"
           
-          # URL güncelleme
+          # SERVER_URL güncelleme
           sed -i "s|buildConfigField \"String\", \"SERVER_URL\", \".*\"|buildConfigField \"String\", \"SERVER_URL\", \"\\\"$S_URL\\\"\"|g" "$TARGET"
           
           echo "Dosya güncellendi. Kontrol:"
