@@ -39,8 +39,8 @@ import java.net.URL
 
 class MainActivity : AppCompatActivity() {
 
-    // ── Sunucu adresi ── Kendi IP adresinizle değiştirin ─────────────────
-    private val SERVER_URL = "https://apartmantakip.peuplade.com.tr"
+    // Sunucu adresi BuildConfig'den alınıyor (build.gradle'da tanımlı)
+    private val SERVER_URL = BuildConfig.SERVER_URL
     // ─────────────────────────────────────────────────────────────────────
 
     private lateinit var webView: WebView
