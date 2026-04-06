@@ -129,7 +129,7 @@ class MainActivity : AppCompatActivity() {
                 val response = java.net.URL(apiUrl).readText()
                 val json = org.json.JSONObject(response)
                 val latestTag = json.getString("tag_name").replace("v", "")
-                val currentVer = packageManager.getPackageInfo(packageName, 0).versionName
+                val currentVer = packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0.0"
 
                 if (isNewerVersion(currentVer, latestTag)) {
                     val downloadUrl = json.getString("html_url")
