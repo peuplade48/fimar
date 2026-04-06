@@ -12,7 +12,8 @@ android {
         minSdk 24
         targetSdk 35
         
-        // DİKKAT: Alttaki iki satıra dokunma, GitHub bunları değiştirecek
+        // ÖNEMLİ: GitHub Actions bu satırları bulup değiştirecek. 
+        // Lütfen bu formatı (boşluklar dahil) değiştirmeyin.
         versionCode 1
         versionName "1.0.0"
 
