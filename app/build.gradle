@@ -4,18 +4,24 @@ plugins {
 }
 
 android {
-    namespace 'com.apartmantakip'
+    namespace 'com.fimar'
     compileSdk 35
 
     defaultConfig {
-        applicationId "com.apartmantakip"
+        applicationId "com.fimar"
         minSdk 24
         targetSdk 35
+
+        // GitHub Actions'dan gelen build numarasını al
+        def githubBuildNumber = project.findProperty('V_CODE')
         
-        // ÖNEMLİ: Sabit rakamları sildik. GitHub Actions'dan gelen numarayı kullanır.
-        // Eğer numara gelmezse (lokal build) 1 ve 1.0.0 yapar.
-        versionCode (project.findProperty('V_CODE') ?: "1").toInteger()
-        versionName "1.0.${project.findProperty('V_CODE') ?: '0'}"
+        if (githubBuildNumber == null) {
+            versionCode 1
+            versionName "1.0.0-local"
+        } else {
+            versionCode githubBuildNumber.toInteger()
+            versionName "1.0.${githubBuildNumber}"
+        }
 
         multiDexEnabled true
         manifestPlaceholders = [appLabel: "Apartman Takip"]
@@ -33,17 +39,13 @@ android {
     }
 
     buildTypes {
-        debug {
-            applicationIdSuffix ".debug"
-            versionNameSuffix "-debug"
-            debuggable true
-            buildConfigField "String", "SERVER_URL", '"https://falzer4.peuplade.com.tr"'
-        }
         release {
             minifyEnabled false
-            shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
+            buildConfigField "String", "SERVER_URL", '"https://falzer4.peuplade.com.tr"'
+        }
+        debug {
             buildConfigField "String", "SERVER_URL", '"https://falzer4.peuplade.com.tr"'
         }
     }
@@ -64,7 +66,4 @@ dependencies {
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0'
     implementation 'androidx.multidex:multidex:2.0.1'
-    implementation 'androidx.credentials:credentials:1.5.0'
-    implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
-    implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
 }
