@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: 📥 Kodu İndir
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: ☕ JDK Kur
         uses: actions/setup-java@v4
@@ -35,40 +37,47 @@ jobs:
       - name: 🏷️ Versiyonu Belirle
         id: versioning
         run: |
-          VERSION_NAME="1.0.${{ github.run_number }}"
-          echo "tag=$VERSION_NAME" >> $GITHUB_OUTPUT
+          # Build numarasını kullanarak 1.0.X formatında versiyon oluşturur
+          V_NAME="1.0.${{ github.run_number }}"
+          V_CODE="${{ github.run_number }}"
+          echo "v_name=$V_NAME" >> $GITHUB_OUTPUT
+          echo "v_code=$V_CODE" >> $GITHUB_OUTPUT
           
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "$VERSION_NAME" || echo "Tag zaten var."
-          git push origin "$VERSION_NAME" || echo "Push zaten yapılmış."
+          git tag "$V_NAME" || echo "Tag zaten var."
+          git push origin "$V_NAME" || echo "Push yapıldı."
 
-      # ── 2. ADIM: PROJE VE GRADLE HAZIRLA ───────────────────────────
-      - name: 🛠️ Gradle Wrapper Onar
+      # ── 2. ADIM: GRADLE VE DOSYA HAZIRLIĞI ──────────────────────────
+      - name: 🛠️ Dosyaları Hazırla
         run: |
-          # Eğer alt klasördeyse dosyaları ana dizine çıkar
           if [ -d "android" ]; then cp -r android/* .; rm -rf android; fi
           
-          # Eksik Gradle dosyalarını sıfırdan oluştur (Hatanın kesin çözümü)
+          # build.gradle dosyasındaki etiketleri GERÇEK değerlerle değiştiriyoruz
+          # Bu yöntem asla sekmez çünkü __VCODE__ ve __VNAME__ eşsizdir.
+          sed -i "s/__VCODE__/${{ steps.versioning.outputs.v_code }}/g" app/build.gradle
+          sed -i "s/__VNAME__/${{ steps.versioning.outputs.v_name }}/g" app/build.gradle
+          
+          # Gradle Wrapper'ı tamir et
           gradle wrapper --gradle-version 8.7
           chmod +x ./gradlew
+          
+          echo "Dosya Güncellendi. Kontrol:"
+          grep -E "versionCode|versionName" app/build.gradle
 
       # ── 3. ADIM: APK BUILD ──────────────────────────────────────────
       - name: 🛠️ APK Build
         run: |
           TYPE="${{ github.event.inputs.build_type || 'debug' }}"
           VARIANT=$(echo "$TYPE" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
-          
-          ./gradlew clean assemble$VARIANT --no-daemon \
-            -PVERSION_NAME="${{ steps.versioning.outputs.tag }}" \
-            -PVERSION_CODE="${{ github.run_number }}"
+          ./gradlew clean assemble$VARIANT --no-daemon
 
       # ── 4. ADIM: RELEASE ───────────────────────────────────────────
       - name: 🚀 GitHub Release Oluştur
         uses: softprops/action-gh-release@v2
         with:
           files: "app/build/outputs/apk/**/*.apk"
-          name: "Apartman Takip v${{ steps.versioning.outputs.tag }}"
-          tag_name: ${{ steps.versioning.outputs.tag }}
+          name: "Apartman Takip v${{ steps.versioning.outputs.v_name }}"
+          tag_name: ${{ steps.versioning.outputs.v_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
