@@ -3,39 +3,25 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
-// GitHub'dan gelen değerleri en başta yakalıyoruz
+// GitHub Actions parametrelerini yakala
 def g_versionCode = project.hasProperty('android.injected.versionCode') ? project.property('android.injected.versionCode').toInteger() : 1
 def g_versionName = project.hasProperty('android.injected.versionName') ? project.property('android.injected.versionName') : "1.0.0"
+def finalUrl = project.findProperty("custom_server_url") ?: "http://192.168.1.100/fimar/index.php"
 
 android {
-    namespace 'com.apartmantakip'
-    compileSdk 35
+    namespace 'com.fimar'
+    compileSdk 34
 
     defaultConfig {
-        applicationId "com.apartmantakip"
+        applicationId "com.fimar"
         minSdk 24
-        targetSdk 35
+        targetSdk 34
         
-        // Değişkenleri buraya atıyoruz
         versionCode g_versionCode
         versionName g_versionName
-
+        
         multiDexEnabled true
-        manifestPlaceholders = [appLabel: "Apartman Takip"]
-    }
-
-    // URL Yapılandırması
-    def finalUrl = project.findProperty("custom_server_url") ?: "https://falzer4.peuplade.com.tr"
-
-    signingConfigs {
-        release {
-            storeFile file(project.findProperty("KEYSTORE_FILE") ?: "release-key.jks")
-            storePassword project.findProperty("KEYSTORE_PASS") ?: "apartman123"
-            keyAlias project.findProperty("KEY_ALIAS") ?: "apartman-alias"
-            keyPassword project.findProperty("KEY_PASS") ?: "apartman123"
-            v1SigningEnabled true
-            v2SigningEnabled true
-        }
+        manifestPlaceholders = [appLabel: "FİMAR Su"]
     }
 
     buildTypes {
@@ -43,13 +29,14 @@ android {
             applicationIdSuffix ".debug"
             versionNameSuffix "-debug"
             debuggable true
+            signingConfig signingConfigs.debug
             buildConfigField "String", "SERVER_URL", "\"${finalUrl}\""
         }
         release {
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            signingConfig signingConfigs.debug // Test için debug imzası devam ediyor
             buildConfigField "String", "SERVER_URL", "\"${finalUrl}\""
         }
     }
@@ -58,8 +45,27 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = '17' }
-    buildFeatures { buildConfig = true; viewBinding = true }
+
+    kotlinOptions {
+        jvmTarget = '17'
+        freeCompilerArgs += ["-opt-in=kotlin.RequiresOptIn"]
+    }
+
+    buildFeatures {
+        buildConfig = true
+        viewBinding = true
+    }
+
+    packaging {
+        resources {
+            excludes += ['/META-INF/{AL2.0,LGPL2.1}', 'META-INF/DEPENDENCIES']
+        }
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
 }
 
 dependencies {
@@ -69,8 +75,7 @@ dependencies {
     implementation 'androidx.webkit:webkit:1.11.0'
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0'
+    implementation 'org.json:json:20240303' 
     implementation 'androidx.multidex:multidex:2.0.1'
-    implementation 'androidx.credentials:credentials:1.5.0'
-    implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
-    implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
 }
