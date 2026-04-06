@@ -120,22 +120,42 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkUpdates() {
-        val githubUser = "falzer4" // Kendi GitHub kullanıcı adınız
-        val repoName   = "Apartman_Takip" // Kendi depo adınız
+        val githubUser = "falzer4" 
+        val repoName   = "Apartman_Takip" 
         val apiUrl = "https://api.github.com/repos/$githubUser/$repoName/releases/latest"
 
         scope.launch(Dispatchers.IO) {
             try {
-                val response = java.net.URL(apiUrl).readText()
-                val json = org.json.JSONObject(response)
-                val latestTag = json.getString("tag_name").replace("v", "")
-                val currentVer = packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0.0"
+                val url = java.net.URL(apiUrl)
+                val connection = url.openConnection() as java.net.HttpURLConnection
+                connection.setRequestProperty("User-Agent", "ApartmanTakip-App") // GitHub API için zorunlu
+                connection.connectTimeout = 10000
+                connection.readTimeout = 10000
 
-                if (isNewerVersion(currentVer, latestTag)) {
-                    val downloadUrl = json.getString("html_url")
-                    withContext(Dispatchers.Main) {
-                        showUpdateDialog(latestTag, downloadUrl)
+                if (connection.responseCode == 200) {
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+                    val json = org.json.JSONObject(response)
+                    val latestTag = json.getString("tag_name").replace("v", "")
+                    
+                    // Mevcut sürümü al
+                    val pInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        packageManager.getPackageInfo(packageName, 0)
                     }
+                    val currentVer = pInfo.versionName ?: "1.0.0"
+
+                    android.util.Log.d("UpdateCheck", "Mevcut: $currentVer, En Yeni: $latestTag")
+
+                    if (isNewerVersion(currentVer, latestTag)) {
+                        val downloadUrl = json.getString("html_url")
+                        withContext(Dispatchers.Main) {
+                            showUpdateDialog(latestTag, downloadUrl)
+                        }
+                    }
+                } else {
+                    android.util.Log.e("UpdateCheck", "GitHub API Hatası: ${connection.responseCode}")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("UpdateCheck", "Güncelleme kontrolü başarısız: ${e.message}")
