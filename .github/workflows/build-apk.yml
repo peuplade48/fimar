@@ -1,4 +1,4 @@
-name: 🔨 Apartman Takip APK Build
+name: 🔨 Fimar Su APK Build
 
 on:
   push:
@@ -14,7 +14,7 @@ on:
       server_url:
         description: 'Sunucu URL Adresi'
         required: true
-        default: 'https://falzer4.peuplade.com.tr'
+        default: 'http://192.168.1.100/fimar/index.php'
 
 permissions:
   contents: write
@@ -52,21 +52,21 @@ jobs:
           git tag "$NEW_TAG"
           git push origin "$NEW_TAG"
 
-      # ── 2. ADIM: PROJE HAZIRLIĞI ─────────────────────────────────────
-      - name: 🛠️ Proje Hazırla
+      # ── 2. ADIM: PROJE HAZIRLA VE WRAPPER KURTAR ────────────────────
+      - name: 🛠️ Gradle Wrapper'ı Kurtar ve Hazırla
         run: |
-          # Eğer dosyalar 'android' klasörü içindeyse dışarı çıkar
+          # Eğer proje 'android' klasöründeyse dışarı çıkar
           if [ -d "android" ]; then cp -r android/* .; rm -rf android; fi
+          
+          # Eksik Gradle dosyalarını yeniden oluştur
+          gradle wrapper --gradle-version 8.7
           chmod +x ./gradlew
 
-      # ── 3. ADIM: KEYSTORE (Sadece Release için) ─────────────────────
-      - name: 🔑 Release Keystore Hazırla
-        env:
-          MY_KEYSTORE_SECRET: ${{ secrets.KEYSTORE_BASE64 }}
-        if: github.event.inputs.build_type == 'release' && env.MY_KEYSTORE_SECRET != ''
+      # ── 3. ADIM: URL GÜNCELLEME (MainActivity.kt için) ──────────────
+      - name: 🌐 Sunucu URL Güncelle
         run: |
-          mkdir -p app
-          echo "$MY_KEYSTORE_SECRET" | base64 --decode > app/release-key.jks
+          SERVER="${{ github.event.inputs.server_url || 'http://192.168.1.100/fimar/index.php' }}"
+          find . -name "MainActivity.kt" -exec sed -i "s|private val SERVER_URL = \".*\"|private val SERVER_URL = \"$SERVER\"|g" {} +
 
       # ── 4. ADIM: BUILD ───────────────────────────────────────────────
       - name: 🛠️ APK Build
@@ -74,34 +74,22 @@ jobs:
           TYPE="${{ github.event.inputs.build_type || 'debug' }}"
           VER_NAME="${{ steps.tagger.outputs.tag }}"
           VER_CODE=${{ github.run_number }}
-          S_URL="${{ github.event.inputs.server_url || 'https://falzer4.peuplade.com.tr' }}"
+          S_URL="${{ github.event.inputs.server_url || 'http://192.168.1.100/fimar/index.php' }}"
           
           # İlk harfi büyüt (debug -> Debug)
-          BUILD_VARIANT=$(echo "$TYPE" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
+          VARIANT=$(echo "$TYPE" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
           
-          ./gradlew clean assemble$BUILD_VARIANT --no-daemon \
+          ./gradlew clean assemble$VARIANT --no-daemon \
             -Pandroid.injected.versionName="$VER_NAME" \
             -Pandroid.injected.versionCode="$VER_CODE" \
-            -Pcustom_server_url="$S_URL" \
-            -PKEYSTORE_FILE="release-key.jks" \
-            -PKEYSTORE_PASS="${{ secrets.KEYSTORE_PASSWORD }}" \
-            -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
-            -PKEY_PASS="${{ secrets.KEY_PASSWORD }}"
+            -Pcustom_server_url="$S_URL"
 
-      # ── 5. ADIM: DOSYALARI DOĞRULA (Hata Ayıklama İçin) ──────────────
-      - name: 🔍 APK Kontrol
-        run: |
-          echo "Oluşan APK'lar listeleniyor:"
-          find app/build/outputs/apk/ -name "*.apk"
-
-      # ── 6. ADIM: GITHUB RELEASE (Kalıcı Yayınlama) ───────────────────
+      # ── 5. ADIM: GITHUB RELEASE ─────────────────────────────────────
       - name: 🚀 GitHub Release Oluştur
         uses: softprops/action-gh-release@v2
         with:
           files: "app/build/outputs/apk/**/*.apk"
-          name: "Apartman Takip v${{ steps.tagger.outputs.tag }}"
+          name: "Fimar Su v${{ steps.tagger.outputs.tag }}"
           tag_name: ${{ steps.tagger.outputs.tag }}
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
