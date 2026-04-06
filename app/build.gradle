@@ -12,9 +12,10 @@ android {
         minSdk 24
         targetSdk 35
         
-        // BU SATIRLAR GITHUB TARAFINDAN SIFIRDAN YAZILACAK
-        versionCode __VCODE__
-        versionName "__VNAME__"
+        // ÖNEMLİ: Sabit rakamları sildik. GitHub Actions'dan gelen numarayı kullanır.
+        // Eğer numara gelmezse (lokal build) 1 ve 1.0.0 yapar.
+        versionCode (project.findProperty('V_CODE') ?: "1").toInteger()
+        versionName "1.0.${project.findProperty('V_CODE') ?: '0'}"
 
         multiDexEnabled true
         manifestPlaceholders = [appLabel: "Apartman Takip"]
