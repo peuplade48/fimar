@@ -1,0 +1,60 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.fimar'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.fimar"
+        minSdk 24
+        targetSdk 35
+        versionCode project.hasProperty('VERSION_CODE') ? VERSION_CODE.toInteger() : 1
+        versionName project.hasProperty('VERSION_NAME') ? VERSION_NAME : "1.0.0"
+        multiDexEnabled true
+        manifestPlaceholders = [appLabel: "FİMAR Su"]
+    }
+
+    signingConfigs {
+        release {
+            storeFile file(project.hasProperty('KEYSTORE_FILE') ? KEYSTORE_FILE : 'release-key.jks')
+            storePassword project.hasProperty('KEYSTORE_PASS') ? KEYSTORE_PASS : ''
+            keyAlias project.hasProperty('KEY_ALIAS') ? KEY_ALIAS : ''
+            keyPassword project.hasProperty('KEY_PASS') ? KEY_PASS : ''
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release  // ✅ RELEASE keystore
+            buildConfigField "String", "SERVER_URL", '"https://apartmantakip.peuplade.com.tr"'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+    buildFeatures {
+        buildConfig = true
+        viewBinding = true
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.webkit:webkit:1.11.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0'
+    implementation 'androidx.multidex:multidex:2.0.1'
+}

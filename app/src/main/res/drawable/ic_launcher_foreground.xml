@@ -1,9 +1,13 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+<<<<<<< HEAD
     xmlns:aapt="http://schemas.android.com/aapt"
+=======
+>>>>>>> 15eeeb48745c5cd9f26e5738dbf9ad2f0f1bebf1
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+<<<<<<< HEAD
     <path android:pathData="M31,63.928c0,0 6.4,-11 12.1,-13.1c7.2,-2.6 26,-1.4 26,-1.4l38.1,38.1L107,108.928l-32,-1L31,63.928z">
         <aapt:attr name="android:fillColor">
             <gradient
@@ -28,3 +32,27 @@
         android:strokeWidth="1"
         android:strokeColor="#00000000" />
 </vector>
+=======
+
+    <!-- Arkaplan dairesi -->
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M0,0 L108,0 L108,108 L0,108 Z" />
+
+    <!-- Su damlası -->
+    <path
+        android:fillColor="#00BCD4"
+        android:pathData="M54,20
+            C54,20 30,50 30,65
+            A24,24 0 0,0 78,65
+            C78,50 54,20 54,20 Z" />
+
+    <!-- İç parlaklık -->
+    <path
+        android:fillColor="#80FFFFFF"
+        android:pathData="M45,55
+            C43,50 44,44 48,40
+            C46,44 45,49 46,53 Z" />
+
+</vector>
+>>>>>>> 15eeeb48745c5cd9f26e5738dbf9ad2f0f1bebf1

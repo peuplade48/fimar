@@ -1,0 +1,115 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.apartmantakip'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.apartmantakip"
+        minSdk 24
+        targetSdk 35
+        
+        // GitHub Actions'dan gelen sürüm bilgilerini güvenli şekilde al (Tırnak işaretlerini temizle)
+        def rawVerCode = project.findProperty("VERSION_CODE")?.toString()?.replace("\"", "")?.replace("'", "") ?: "1"
+        def verCode = rawVerCode.toInteger()
+        def verName = project.findProperty("VERSION_NAME")?.toString()?.replace("\"", "")?.replace("'", "") ?: "1.0.0"
+
+        versionCode verCode
+        versionName verName
+
+        multiDexEnabled true
+
+        manifestPlaceholders = [appLabel: "Apartman Takip"]
+    }
+
+    // GitHub Actions'da dosya hatası almamak için imza yapılandırmasını dinamik yapıyoruz
+    // Load signing properties if they exist
+    def keystorePropertiesFile = rootProject.file('keystore.properties')
+    def keystoreProperties = new Properties()
+    if (keystorePropertiesFile.exists()) {
+        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    }
+
+    signingConfigs {
+        release {
+            // Parametre boşsa veya null ise varsayılan değerleri kullan
+            def getProp = { propName, defaultValue ->
+                def val = project.findProperty(propName)?.toString()?.replace("\"", "")?.replace("'", "")
+                return (val == null || val.isEmpty()) ? defaultValue : val
+            }
+
+            storeFile file(getProp("KEYSTORE_FILE", "release-key.jks"))
+            storePassword getProp("KEYSTORE_PASS", "apartman123")
+            keyAlias getProp("KEY_ALIAS", "apartman-alias")
+            keyPassword getProp("KEY_PASS", "apartman123")
+
+            v1SigningEnabled true
+            v2SigningEnabled true
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+            debuggable true
+            
+            buildConfigField "String", "SERVER_URL", '"https://apartmantakip.peuplade.com.tr"'
+        }
+        release {
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            
+            signingConfig signingConfigs.release
+            
+            buildConfigField "String", "SERVER_URL", '"https://apartmantakip.peuplade.com.tr"'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+        freeCompilerArgs += ["-opt-in=kotlin.RequiresOptIn"]
+    }
+
+    buildFeatures {
+        buildConfig = true
+        viewBinding = true
+    }
+
+    packaging {
+        resources {
+            excludes += ['/META-INF/{AL2.0,LGPL2.1}', 'META-INF/DEPENDENCIES']
+        }
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.webkit:webkit:1.11.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0'
+    implementation 'org.json:json:20240303' 
+    implementation 'androidx.multidex:multidex:2.0.1'
+
+    // Google Sign-In / Credentials API
+    implementation 'androidx.credentials:credentials:1.5.0'
+    implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
+    implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
+}

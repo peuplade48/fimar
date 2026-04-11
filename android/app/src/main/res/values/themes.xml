@@ -1,10 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-<<<<<<< HEAD
-
-    <style name="Theme.Apartmantakip" parent="android:Theme.Material.Light.NoActionBar" />
-</resources>
-=======
     <!-- FİMAR Ana Tema -->
     <style name="Theme.Fimar" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>
@@ -27,4 +22,3 @@
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
     </style>
 </resources>
->>>>>>> 15eeeb48745c5cd9f26e5738dbf9ad2f0f1bebf1

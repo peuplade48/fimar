@@ -1,0 +1,84 @@
+name: 🔨 Apartman Takip APK Build
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: 📦 APK Oluştur
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: 📥 Kodu İndir
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔢 Sürüm Bilgilerini Ayarla (OFFSET Uygulanmış)
+        run: |
+          # OFFSET: github.run_number 260 ise, 260 - 259 = 1 olur. Sürüm: 1.0.1
+          OFFSET=259
+          RUN_NUMBER=${{ github.run_number }}
+          VERSION_LAST=$((RUN_NUMBER - OFFSET))
+          
+          # Eğer numara 1'den küçükse 1 yap (Hata önleyici)
+          if [ $VERSION_LAST -lt 1 ]; then VERSION_LAST=1; fi
+          
+          VERSION_NAME="1.0.$VERSION_LAST"
+          VERSION_CODE=$RUN_NUMBER
+          
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
+          echo "RELEASE_TAG=v$VERSION_NAME" >> $GITHUB_ENV
+          echo "🚀 Sürüm Hazırlanıyor: $VERSION_NAME ($VERSION_CODE)"
+
+      - name: ☕ JDK Kur
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: 🔑 Keystore Hazırla
+        run: |
+          mkdir -p app
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/release-key.jks
+
+      - name: 🛠️ Gradle Build (Release)
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: 8.7
+          arguments: |
+            assembleRelease
+            --no-daemon
+            -PVERSION_NAME=${{ env.VERSION_NAME }}
+            -PVERSION_CODE=${{ env.VERSION_CODE }}
+            -PKEYSTORE_FILE=release-key.jks
+            -PKEYSTORE_PASS=${{ secrets.KEY_STORE_PASSWORD }}
+            -PKEY_ALIAS=${{ secrets.KEY_ALIAS }}
+            -PKEY_PASS=${{ secrets.KEY_PASSWORD }}
+
+      - name: 📤 APK Kaydet
+        uses: actions/upload-artifact@v4
+        with:
+          name: apartman-takip-${{ env.VERSION_NAME }}
+          path: "app/build/outputs/apk/release/*.apk"
+
+      - name: 🚀 GitHub Release Oluştur
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/outputs/apk/release/*.apk
+          name: "Apartman Takip v${{ env.VERSION_NAME }}"
+          tag_name: ${{ env.RELEASE_TAG }}
+          body: |
+            ## 📱 Apartman Takip Yeni Sürüm
+            - **Versiyon:** ${{ env.VERSION_NAME }}
+            - **Build Numarası:** ${{ env.VERSION_CODE }}
+            - **Tarih:** ${{ github.event.head_commit.timestamp }}
+            - **Son Değişiklik:** ${{ github.event.head_commit.message }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
