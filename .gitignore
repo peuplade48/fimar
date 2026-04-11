@@ -1,24 +1,13 @@
 *.iml
 .gradle
 /local.properties
-<<<<<<< HEAD
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-=======
 /.idea
->>>>>>> 15eeeb48745c5cd9f26e5738dbf9ad2f0f1bebf1
 .DS_Store
 /build
 /captures
 .externalNativeBuild
 .cxx
 local.properties
-<<<<<<< HEAD
-=======
 # Keystore dosyaları (güvenlik)
 *.keystore
 *.jks
@@ -26,4 +15,3 @@ local.properties
 !app/release-key.jks
 # Builds
 app/build/
->>>>>>> 15eeeb48745c5cd9f26e5738dbf9ad2f0f1bebf1
