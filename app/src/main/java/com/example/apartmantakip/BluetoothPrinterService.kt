@@ -3,6 +3,7 @@ package com.example.apartmantakip
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.util.Log
@@ -18,7 +19,8 @@ class BluetoothPrinterService(private val context: Context) {
 
     @SuppressLint("MissingPermission")
     fun connectToDevice(deviceAddress: String): Boolean {
-        val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val bluetoothAdapter = bluetoothManager.adapter
         if (bluetoothAdapter == null) return false
         val device = bluetoothAdapter.getRemoteDevice(deviceAddress)
 
@@ -43,7 +45,7 @@ class BluetoothPrinterService(private val context: Context) {
         }
     }
 
-    fun printInvoice(invoice: InvoiceDetail, apartmentName: String) {
+    fun printInvoice(invoice: Invoice, apartmentName: String) {
         val esc = EscPosCommands()
         try {
             outputStream?.write(esc.initPrinter())

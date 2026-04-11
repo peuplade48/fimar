@@ -13,21 +13,42 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
+import android.view.View
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
+import android.widget.Button
+import android.widget.ProgressBar
+import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
     private lateinit var webView: WebView
+    private lateinit var progressBar: ProgressBar
+    private lateinit var offlineLayout: View
     private lateinit var printerService: BluetoothPrinterService
+    private val serverUrl = "https://apartmantakip.peuplade.com.tr/index.php"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
 
         printerService = BluetoothPrinterService(this)
+        webView = findViewById(R.id.webView)
+        progressBar = findViewById(R.id.progressBar)
+        offlineLayout = findViewById(R.id.offlineLayout)
 
-        webView = WebView(this)
-        setContentView(webView)
+        val tvServerUrl: TextView = findViewById(R.id.tvServerUrl)
+        tvServerUrl.text = serverUrl
+
+        val btnRetry: Button = findViewById(R.id.btnRetry)
+        btnRetry.setOnClickListener {
+            offlineLayout.visibility = View.GONE
+            webView.visibility = View.VISIBLE
+            webView.reload()
+        }
 
         setupWebView()
         checkPermissions()
@@ -42,20 +63,40 @@ class MainActivity : ComponentActivity() {
         webSettings.useWideViewPort = true
         webSettings.databaseEnabled = true
         
-        // Bu ayar yerel dosyalara ve karışık içeriğe (http/https) izin verir
         webSettings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                progressBar.progress = newProgress
+                if (newProgress == 100) {
+                    progressBar.visibility = View.GONE
+                } else {
+                    progressBar.visibility = View.VISIBLE
+                }
+            }
+        }
+
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                // Sayfa yüklendiğinde gerekirse bir JS fonksiyonu çağrılabilir
+                progressBar.visibility = View.GONE
+            }
+
+            override fun onReceivedError(
+                view: WebView?,
+                request: WebResourceRequest?,
+                error: WebResourceError?
+            ) {
+                // Sadece ana sayfa yüklemesindeki hataları göster (statik kaynaklardaki hataları yoksay)
+                if (request?.isForMainFrame == true) {
+                    webView.visibility = View.GONE
+                    offlineLayout.visibility = View.VISIBLE
+                }
             }
         }
         
         webView.addJavascriptInterface(WebAppInterface(this, printerService), "Android")
-        
-        // Canlı sunucu adresi kullanılıyor.
-        webView.loadUrl("https://apartmantakip.peuplade.com.tr/index.php")
+        webView.loadUrl(serverUrl)
     }
 
     private fun checkPermissions() {
