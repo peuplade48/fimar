@@ -1,5 +1,4 @@
 #!/bin/sh
-<<<<<<< HEAD
 
 #
 # Copyright © 2015 the original authors.
@@ -104,28 +103,10 @@ die () {
 } >&2
 
 # OS specific support (must be 'true' or 'false').
-=======
-#
-# Copyright © 2015-2021 the original authors.
-# Gradle wrapper script for Linux/Mac
-
-##############################################################################
-# Helper Functions
-##############################################################################
-die () {
-    echo
-    echo "ERROR: $*" >&2
-    echo
-    exit 1
-}
-
-# OS specific support
->>>>>>> 15eeeb48745c5cd9f26e5738dbf9ad2f0f1bebf1
 cygwin=false
 msys=false
 darwin=false
 nonstop=false
-<<<<<<< HEAD
 case "$( uname )" in                #(
   CYGWIN* )         cygwin=true  ;; #(
   Darwin* )         darwin=true  ;; #(
@@ -133,7 +114,7 @@ case "$( uname )" in                #(
   NONSTOP* )        nonstop=true ;;
 esac
 
-CLASSPATH="\\\"\\\""
+CLASSPATH=""
 
 
 # Determine the Java command to use to start the JVM.
@@ -268,27 +249,3 @@ eval "set -- $(
     )" '"$@"'
 
 exec "$JAVACMD" "$@"
-=======
-case "$( uname )" in
-  CYGWIN* ) cygwin=true ;;
-  Darwin  ) darwin=true ;;
-  MSYS* | MINGW* ) msys=true ;;
-  NONSTOP* ) nonstop=true ;;
-esac
-
-CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
-
-# Determine the Java command
-if [ -n "$JAVA_HOME" ] ; then
-    JAVACMD=$JAVA_HOME/bin/java
-    if [ ! -x "$JAVACMD" ] ; then
-        die "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME"
-    fi
-else
-    JAVACMD=java
-    which java >/dev/null 2>&1 || die "ERROR: JAVA_HOME is not set and no 'java' command found."
-fi
-
-APP_HOME=$( cd "${0%/*}" && pwd -P )
-exec "$JAVACMD" -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
->>>>>>> 15eeeb48745c5cd9f26e5738dbf9ad2f0f1bebf1

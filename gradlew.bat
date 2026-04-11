@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 @rem
 @rem Copyright 2015 the original author or authors.
 @rem
@@ -71,11 +70,11 @@ goto fail
 :execute
 @rem Setup the command line
 
-set CLASSPATH=
+set CLASSPATH=%APP_HOME%\gradle\wrapper\gradle-wrapper.jar
 
 
 @rem Execute Gradle
-"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -classpath "%CLASSPATH%" -jar "%APP_HOME%\gradle\wrapper\gradle-wrapper.jar" %*
+"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -classpath "%CLASSPATH%" org.gradle.wrapper.GradleWrapperMain %*
 
 :end
 @rem End local scope for the variables with windows NT shell
@@ -93,29 +92,3 @@ exit /b %EXIT_CODE%
 if "%OS%"=="Windows_NT" endlocal
 
 :omega
-=======
-@rem Gradle wrapper for Windows
-@if "%DEBUG%"=="" @echo off
-@rem Set local scope for variables
-setlocal
-set DIRNAME=%~dp0
-if "%DIRNAME%"=="" set DIRNAME=.
-set APP_BASE_NAME=%~n0
-set APP_HOME=%DIRNAME%
-
-@rem Find java.exe
-set JAVA_EXE=java.exe
-%JAVA_EXE% -version >NUL 2>&1
-if %ERRORLEVEL% EQU 0 goto execute
-echo ERROR: JAVA_HOME is not set correctly. >&2
-goto fail
-:execute
-set CLASSPATH=%APP_HOME%\gradle\wrapper\gradle-wrapper.jar
-%JAVA_EXE% %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% -classpath "%CLASSPATH%" org.gradle.wrapper.GradleWrapperMain %CMD_LINE_ARGS%
-:end
-if "%ERRORLEVEL%"=="0" goto mainEnd
-:fail
-exit /b 1
-:mainEnd
-endlocal
->>>>>>> 15eeeb48745c5cd9f26e5738dbf9ad2f0f1bebf1
