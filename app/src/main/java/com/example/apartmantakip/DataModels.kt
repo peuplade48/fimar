@@ -24,7 +24,7 @@ data class User(
     val aktif: Int
 )
 
-data class Unit(
+data class BuildingUnit(
     val id: Int,
     @SerializedName("bina_id") val binaId: Int,
     val blok: String?,
@@ -150,7 +150,7 @@ data class ApiResponse<T>(
     @SerializedName("email_onay_gerekli") val emailOnayGerekli: Boolean = false,
     val data: T? = null,
     // Special cases for some endpoints
-    val daireler: List<Unit>? = null,
+    val daireler: List<BuildingUnit>? = null,
     val sakinler: List<Resident>? = null,
     val fiyatlar: List<Price>? = null,
     val faturalar: List<Invoice>? = null,

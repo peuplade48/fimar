@@ -23,6 +23,7 @@ import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.apartmantakip.R
 
 class MainActivity : ComponentActivity() {
     private lateinit var webView: WebView

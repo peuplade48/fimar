@@ -14,7 +14,7 @@ interface ApiService {
     @POST("api.php")
     suspend fun loginVerify(
         @Query("action") action: String = "login_verify",
-        @Body body: Map<String, Any>
+        @Body body: Map<String, Any?>
     ): Response<ApiResponse<Void>>
 
     @GET("api.php")
@@ -27,7 +27,7 @@ interface ApiService {
     suspend fun getUnitList(
         @Query("action") action: String = "daire_listesi",
         @Query("donem") donem: String? = null
-    ): Response<ApiResponse<Unit>>
+    ): Response<ApiResponse<List<BuildingUnit>>>
 
     @GET("api.php")
     suspend fun getResidentList(

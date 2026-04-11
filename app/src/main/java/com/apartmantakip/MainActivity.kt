@@ -1,5 +1,7 @@
 package com.apartmantakip
 
+import com.example.apartmantakip.R
+import com.example.apartmantakip.BuildConfig
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
