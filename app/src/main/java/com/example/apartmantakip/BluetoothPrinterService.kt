@@ -19,6 +19,7 @@ class BluetoothPrinterService(private val context: Context) {
     @SuppressLint("MissingPermission")
     fun connectToDevice(deviceAddress: String): Boolean {
         val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+        if (bluetoothAdapter == null) return false
         val device = bluetoothAdapter.getRemoteDevice(deviceAddress)
 
         return try {
