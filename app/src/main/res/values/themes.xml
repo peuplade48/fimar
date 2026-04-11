@@ -1,30 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-<<<<<<< HEAD
-
-    <style name="Theme.Apartmantakip" parent="android:Theme.Material.Light.NoActionBar" />
-</resources>
-=======
-    <!-- FİMAR Ana Tema -->
-    <style name="Theme.Fimar" parent="Theme.AppCompat.Light.NoActionBar">
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/accent_cyan</item>
-
-        <item name="android:windowBackground">@color/bg_dark</item>
-        <item name="android:statusBarColor">@color/bg_dark2</item>
-        <item name="android:navigationBarColor">@color/bg_dark</item>
-        <item name="android:windowLightStatusBar">false</item>
-
-        <!-- Metin -->
-        <item name="android:textColorPrimary">@color/text_primary</item>
-        <item name="android:textColorSecondary">@color/text_secondary</item>
-    </style>
-
-    <!-- SplashScreen (API 31+) -->
-    <style name="Theme.Fimar.Splash" parent="Theme.Fimar">
-        <item name="android:windowSplashScreenBackground">@color/bg_dark</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    <style name="Theme.Apartmantakip" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorPrimaryDark">@color/purple_700</item>
+        <item name="colorAccent">@color/teal_200</item>
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
 </resources>
->>>>>>> 15eeeb48745c5cd9f26e5738dbf9ad2f0f1bebf1
