@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-<resources>
-    <string name="app_name">apartmantakip</string>
-</resources>
-=======
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Apartman Su ve Aidat Takip Sistemi</string>
@@ -59,4 +54,3 @@
     <string name="cd_webview">Fatura yönetim ekranı</string>
     <string name="cd_progress">Yükleme ilerlemesi</string>
 </resources>
->>>>>>> 15eeeb48745c5cd9f26e5738dbf9ad2f0f1bebf1

@@ -54,9 +54,8 @@ class MainActivity : ComponentActivity() {
         
         webView.addJavascriptInterface(WebAppInterface(this, printerService), "Android")
         
-        // Emülatör için 10.0.2.2, gerçek cihaz için sunucu IP'si girilmeli.
-        // index.php zaten Android köprüsü bekliyor.
-        webView.loadUrl("http://10.0.2.2/apartantakip/index.php")
+        // Canlı sunucu adresi kullanılıyor.
+        webView.loadUrl("https://apartmantakip.peuplade.com.tr/index.php")
     }
 
     private fun checkPermissions() {
