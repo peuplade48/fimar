@@ -26,10 +26,11 @@ android {
                 localProps.load(new FileInputStream(localPropsFile))
             }
 
+            // GitHub Secrets'tan geliyorsa onu kullan, gelmiyorsa local.properties, o da yoksa 'apartman123'
             storeFile file(project.hasProperty('KEYSTORE_FILE') ? KEYSTORE_FILE : 'release-key.jks')
-            storePassword project.hasProperty('KEYSTORE_PASS') ? KEYSTORE_PASS : localProps['release.password']
-            keyAlias project.hasProperty('KEY_ALIAS') ? KEY_ALIAS : localProps['release.alias']
-            keyPassword project.hasProperty('KEY_PASS') ? KEY_PASS : localProps['release.keyPassword']
+            storePassword project.findProperty('KEYSTORE_PASS') ?: localProps['release.password'] ?: 'apartman123'
+            keyAlias project.findProperty('KEY_ALIAS') ?: localProps['release.alias'] ?: 'apartman123'
+            keyPassword project.findProperty('KEY_PASS') ?: localProps['release.keyPassword'] ?: 'apartman123'
         }
     }
 
