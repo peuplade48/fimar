@@ -20,10 +20,16 @@ android {
 
     signingConfigs {
         release {
+            def localProps = new Properties()
+            def localPropsFile = rootProject.file('local.properties')
+            if (localPropsFile.exists()) {
+                localProps.load(new FileInputStream(localPropsFile))
+            }
+
             storeFile file(project.hasProperty('KEYSTORE_FILE') ? KEYSTORE_FILE : 'release-key.jks')
-            storePassword project.hasProperty('KEYSTORE_PASS') ? KEYSTORE_PASS : ''
-            keyAlias project.hasProperty('KEY_ALIAS') ? KEY_ALIAS : ''
-            keyPassword project.hasProperty('KEY_PASS') ? KEY_PASS : ''
+            storePassword project.hasProperty('KEYSTORE_PASS') ? KEYSTORE_PASS : localProps['release.password']
+            keyAlias project.hasProperty('KEY_ALIAS') ? KEY_ALIAS : localProps['release.alias']
+            keyPassword project.hasProperty('KEY_PASS') ? KEY_PASS : localProps['release.keyPassword']
         }
     }
 
@@ -36,10 +42,8 @@ android {
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             
-            // GitHub Actions veya yerel parametreler varsa imzalamayı aktif et
-            if (project.hasProperty('KEYSTORE_FILE')) {
-                signingConfig signingConfigs.release
-            }
+            // Eğer imza ayarları (şifreler) mevcutsa imzalamayı aktif et
+            signingConfig signingConfigs.release
 
             buildConfigField "String", "SERVER_URL", '"https://apartmantakip.peuplade.com.tr"'
         }

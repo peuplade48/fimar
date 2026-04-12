@@ -38,21 +38,21 @@ jobs:
 
       - name: 🔑 Keystore Hazırla
         run: |
-          # Keystore'u base64'ten çözüp android/app klasörüne koyuyoruz
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release-key.jks
 
-      - name: 🛠️ Gradle Build (Release)
-        uses: gradle/gradle-build-action@v3
+      - name: 🛠️ Gradle Kur ve Çalıştır
+        uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.7
-          arguments: |
-            :app:assembleRelease
-            --no-daemon
-            -PVERSION_NAME=${{ env.VERSION_NAME }}
-            -PVERSION_CODE=${{ env.VERSION_CODE }}
-            -PKEYSTORE_FILE=release-key.jks
-            -PKEYSTORE_PASS=${{ secrets.KEY_STORE_PASSWORD }}
-            -PKEY_ALIAS=${{ secrets.KEY_ALIAS }}
+
+      - name: 🔨 APK Build
+        run: |
+          ./gradlew :app:assembleRelease \
+            -PVERSION_NAME=${{ env.VERSION_NAME }} \
+            -PVERSION_CODE=${{ env.VERSION_CODE }} \
+            -PKEYSTORE_FILE=release-key.jks \
+            -PKEYSTORE_PASS=${{ secrets.KEY_STORE_PASSWORD }} \
+            -PKEY_ALIAS=${{ secrets.KEY_ALIAS }} \
             -PKEY_PASS=${{ secrets.KEY_PASSWORD }}
 
       - name: 📤 APK Kaydet
