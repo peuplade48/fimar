@@ -36,6 +36,11 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: 🔑 Keystore Hazırla
+        run: |
+          # Keystore'u base64'ten çözüp android/app klasörüne koyuyoruz
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release-key.jks
+
       - name: 🛠️ Gradle Build (Release)
         uses: gradle/gradle-build-action@v3
         with:
