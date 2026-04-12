@@ -21,9 +21,9 @@ android {
     signingConfigs {
         release {
             storeFile file(project.hasProperty('KEYSTORE_FILE') ? KEYSTORE_FILE : 'release-key.jks')
-            storePassword project.hasProperty('KEYSTORE_PASS') ? KEYSTORE_PASS : 'apartman123'
-            keyAlias project.hasProperty('KEY_ALIAS') ? KEY_ALIAS : 'apartman123'
-            keyPassword project.hasProperty('KEY_PASS') ? KEY_PASS : 'apartman123'
+            storePassword project.hasProperty('KEYSTORE_PASS') ? KEYSTORE_PASS : ''
+            keyAlias project.hasProperty('KEY_ALIAS') ? KEY_ALIAS : ''
+            keyPassword project.hasProperty('KEY_PASS') ? KEY_PASS : ''
         }
     }
 
