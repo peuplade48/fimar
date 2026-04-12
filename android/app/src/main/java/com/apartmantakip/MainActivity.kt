@@ -1,4 +1,4 @@
-package com.fimar
+package com.apartmantakip
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -25,9 +25,17 @@ import java.net.URL
 
 class MainActivity : AppCompatActivity() {
 
-    // ── Sunucu adresi ── Kendi IP adresinizle değiştirin ─────────────────
-    private val SERVER_URL = "http://192.168.1.100/fimar/index.php"
-    // ─────────────────────────────────────────────────────────────────────
+    // Varsayılan URL (BuildConfig gelmezse kullanılacak)
+    private val DEFAULT_URL = "https://apartmantakip.peuplade.com.tr"
+
+    private val SERVER_URL: String by lazy {
+        try {
+            getSharedPreferences("fimar", Context.MODE_PRIVATE)
+                .getString("server_url", DEFAULT_URL) ?: DEFAULT_URL
+        } catch (e: Exception) {
+            DEFAULT_URL
+        }
+    }
 
     private lateinit var webView: WebView
     private lateinit var progressBar: ProgressBar
@@ -54,6 +62,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // WebView Debugging (Emulator/Debug modunda yardımcı olur)
+        if (BuildConfig.DEBUG) {
+            WebView.setWebContentsDebuggingEnabled(true)
+        }
 
         webView    = findViewById(R.id.webView)
         progressBar = findViewById(R.id.progressBar)
@@ -85,18 +98,24 @@ class MainActivity : AppCompatActivity() {
 
         webView.webViewClient = object : WebViewClient() {
             override fun onReceivedSslError(v: WebView?, h: SslErrorHandler?, e: SslError?) {
+                android.util.Log.w("FimarWebView", "SSL Hatası: ${e?.primaryError}")
                 h?.proceed()
             }
             override fun onPageStarted(v: WebView?, url: String?, f: android.graphics.Bitmap?) {
+                android.util.Log.d("FimarWebView", "Sayfa yükleniyor: $url")
                 progressBar.visibility = View.VISIBLE
             }
             override fun onPageFinished(v: WebView?, url: String?) {
+                android.util.Log.d("FimarWebView", "Sayfa yüklendi: $url")
                 progressBar.visibility = View.GONE
                 notifyBtStatus()
             }
             override fun onReceivedError(v: WebView?, req: WebResourceRequest?, err: WebResourceError?) {
-                progressBar.visibility = View.GONE
-                showOfflinePage()
+                android.util.Log.e("FimarWebView", "Hata: ${err?.description} (URL: ${req?.url})")
+                if (req?.isForMainFrame == true) {
+                    progressBar.visibility = View.GONE
+                    showOfflinePage()
+                }
             }
         }
 

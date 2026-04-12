@@ -1,4 +1,4 @@
-package com.fimar
+package com.apartmantakip
 
 import android.app.Activity
 import android.content.Intent

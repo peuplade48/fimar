@@ -14,4 +14,6 @@ local.properties
 !app/debug.keystore
 !app/release-key.jks
 # Builds
-app/build/
+/build
+/app/build
+/android/app/build

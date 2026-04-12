@@ -4,17 +4,18 @@ plugins {
 }
 
 android {
-    namespace 'com.fimar'
+    namespace 'com.apartmantakip'
     compileSdk 35
 
     defaultConfig {
-        applicationId "com.fimar"
+        applicationId "com.apartmantakip"
         minSdk 24
         targetSdk 35
         versionCode project.hasProperty('VERSION_CODE') ? VERSION_CODE.toInteger() : 1
         versionName project.hasProperty('VERSION_NAME') ? VERSION_NAME : "1.0.0"
         multiDexEnabled true
         manifestPlaceholders = [appLabel: "FİMAR Su"]
+        buildConfigField "String", "SERVER_URL", '"https://apartmantakip.peuplade.com.tr"'
     }
 
     signingConfigs {
@@ -27,11 +28,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release  // ✅ RELEASE keystore
+            // signingConfig signingConfigs.release  // Temporarily comment out if JKS is missing
             buildConfigField "String", "SERVER_URL", '"https://apartmantakip.peuplade.com.tr"'
         }
     }
