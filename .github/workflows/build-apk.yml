@@ -51,9 +51,9 @@ jobs:
             -PVERSION_NAME=${{ env.VERSION_NAME }} \
             -PVERSION_CODE=${{ env.VERSION_CODE }} \
             -PKEYSTORE_FILE=release-key.jks \
-            -PKEYSTORE_PASS=${{ secrets.KEY_STORE_PASSWORD }} \
-            -PKEY_ALIAS=${{ secrets.KEY_ALIAS }} \
-            -PKEY_PASS=${{ secrets.KEY_PASSWORD }}
+            -PKEYSTORE_PASS=${{ secrets.KEY_STORE_PASSWORD || 'apartman123' }} \
+            -PKEY_ALIAS=${{ secrets.KEY_ALIAS || 'apartman123' }} \
+            -PKEY_PASS=${{ secrets.KEY_PASSWORD || 'apartman123' }}
 
       - name: 📤 APK Kaydet
         uses: actions/upload-artifact@v4
